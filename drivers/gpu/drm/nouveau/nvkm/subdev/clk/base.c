@@ -74,6 +74,57 @@ nvkm_clk_adjust(struct nvkm_clk *clk, bool adjust,
 /******************************************************************************
  * C-States
  *****************************************************************************/
+static bool
+nvkm_cstate_valid(struct nvkm_clk *clk, struct nvkm_cstate *cstate, u32 max_volt, int temp)
+{
+	struct nvkm_volt *volt = clk->subdev.device->volt;
+	int voltage;
+
+	if (!volt)
+		return true;
+
+	voltage = nvkm_volt_map(volt, cstate->voltage, temp);
+	if (voltage < 0)
+		return false;
+	return voltage <= min(max_volt, volt->max_uv) &&
+	       voltage >= volt->min_uv;
+}
+
+static struct nvkm_cstate *
+nvkm_cstate_find_best(struct nvkm_clk *clk, struct nvkm_pstate *pstate)
+{
+	struct nvkm_device *device = clk->subdev.device;
+	struct nvkm_therm *therm = device->therm;
+	struct nvkm_volt *volt = device->volt;
+	struct nvkm_cstate *cstate;
+	int temp = 0, max_volt;
+
+	if (!volt)
+		return list_entry(pstate->list.prev, typeof(*cstate), head);
+
+	if (therm) {
+		/* ignore error code */
+		temp = max(0, nvkm_therm_temp_get(therm));
+	}
+
+	max_volt = volt->max_uv;
+	if (volt->max0_vid != 0xff)
+		max_volt = min(max_volt,
+			       nvkm_volt_map(volt, volt->max0_vid, temp));
+	if (volt->max1_vid != 0xff)
+		max_volt = min(max_volt,
+			       nvkm_volt_map(volt, volt->max1_vid, temp));
+
+	for (cstate = list_entry(pstate->list.prev, typeof(*cstate), head);
+	     &cstate->head != &pstate->list;
+	     cstate = list_entry(cstate->head.prev, typeof(*cstate), head)) {
+		if (nvkm_cstate_valid(clk, cstate, max_volt, temp))
+			break;
+	}
+
+	return cstate;
+}
+
 static int
 nvkm_cstate_prog(struct nvkm_clk *clk, struct nvkm_pstate *pstate, int cstatei)
 {
@@ -86,8 +137,7 @@ nvkm_cstate_prog(struct nvkm_clk *clk, struct nvkm_pstate *pstate, int cstatei)
 
 	if (!list_empty(&pstate->list)) {
 		if (cstatei == -1)
-			cstate = list_entry(pstate->list.prev, typeof(*cstate),
-					    head);
+			cstate = nvkm_cstate_find_best(clk, pstate);
 		else {
 			list_for_each_entry(cstate, &pstate->list, head) {
 				if (cstate->cstate == cstatei)
