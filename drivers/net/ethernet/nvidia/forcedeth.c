@@ -291,6 +291,7 @@ enum {
 #define NVREG_WAKEUPFLAGS_ACCEPT_WAKEUPPAT	0x02
 #define NVREG_WAKEUPFLAGS_ACCEPT_LINKCHANGE	0x04
 #define NVREG_WAKEUPFLAGS_ENABLE_G	0x01111
+#define NVREG_WAKEUPFLAGS_ENABLE_P	0x12000
 
 	NvRegMgmtUnitGetVersion = 0x204,
 #define NVREG_MGMTUNITGETVERSION	0x01
@@ -4216,7 +4217,7 @@ static void nv_get_drvinfo(struct net_device *dev, struct ethtool_drvinfo *info)
 static void nv_get_wol(struct net_device *dev, struct ethtool_wolinfo *wolinfo)
 {
 	struct fe_priv *np = netdev_priv(dev);
-	wolinfo->supported = WAKE_MAGIC;
+	wolinfo->supported = WAKE_MAGIC | WAKE_PHY;
 
 	spin_lock_irq(&np->lock);
 	wolinfo->wolopts = np->wolenabled;
@@ -4233,6 +4234,10 @@ static int nv_set_wol(struct net_device *dev, struct ethtool_wolinfo *wolinfo)
 	if (wolinfo->wolopts & WAKE_MAGIC) {
 		np->wolenabled |= WAKE_MAGIC;
 		np->wol_flags |= NVREG_WAKEUPFLAGS_ENABLE_G;
+	}
+	if (wolinfo->wolopts & WAKE_PHY) {
+		np->wolenabled |= WAKE_PHY;
+		np->wol_flags |= NVREG_WAKEUPFLAGS_ENABLE_P;
 	}
 	if (netif_running(dev)) {
 		spin_lock_irq(&np->lock);
