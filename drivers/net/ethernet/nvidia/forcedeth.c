@@ -4217,7 +4217,7 @@ static void nv_get_drvinfo(struct net_device *dev, struct ethtool_drvinfo *info)
 static void nv_get_wol(struct net_device *dev, struct ethtool_wolinfo *wolinfo)
 {
 	struct fe_priv *np = netdev_priv(dev);
-	wolinfo->supported = WAKE_MAGIC | WAKE_PHY;
+	wolinfo->supported = WAKE_MAGIC | WAKE_PHY | WAKE_UCAST;
 
 	spin_lock_irq(&np->lock);
 	wolinfo->wolopts = np->wolenabled;
@@ -4238,6 +4238,14 @@ static int nv_set_wol(struct net_device *dev, struct ethtool_wolinfo *wolinfo)
 	if (wolinfo->wolopts & WAKE_PHY) {
 		np->wolenabled |= WAKE_PHY;
 		np->wol_flags |= NVREG_WAKEUPFLAGS_ENABLE_P;
+	}
+	if (wolinfo->wolopts & WAKE_UCAST) {
+		np->wolenabled |= WAKE_PHY;
+		np->wol_flags |= 0x22000;
+		spin_lock_irq(&np->lock);
+		writel(0x9051fa0a, base + 0x218);
+		writel(0x0000003f, base + 0x21c);
+		spin_unlock_irq(&np->lock);
 	}
 	if (netif_running(dev)) {
 		spin_lock_irq(&np->lock);
