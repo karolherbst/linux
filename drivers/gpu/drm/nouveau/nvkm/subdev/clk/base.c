@@ -264,6 +264,9 @@ nvkm_pstate_prog(struct nvkm_clk *clk, int pstatei)
 	struct nvkm_pstate *pstate;
 	int ret, idx = 0;
 
+	if (pstatei == -1)
+		return 0;
+
 	list_for_each_entry(pstate, &clk->states, head) {
 		if (idx++ == pstatei)
 			break;
@@ -292,7 +295,7 @@ nvkm_pstate_work(struct work_struct *work)
 {
 	struct nvkm_clk *clk = container_of(work, typeof(*clk), work);
 	struct nvkm_subdev *subdev = &clk->subdev;
-	int pstate;
+	int pstate, ret;
 
 	if (!atomic_xchg(&clk->waiting, 0))
 		return;
@@ -312,12 +315,10 @@ nvkm_pstate_work(struct work_struct *work)
 	}
 
 	nvkm_trace(subdev, "-> %d\n", pstate);
-	if (pstate != clk->pstate) {
-		int ret = nvkm_pstate_prog(clk, pstate);
-		if (ret) {
-			nvkm_error(subdev, "error setting pstate %d: %d\n",
-				   pstate, ret);
-		}
+	ret = nvkm_pstate_prog(clk, pstate);
+	if (ret) {
+		nvkm_error(subdev, "error setting pstate %d: %d\n",
+			   pstate, ret);
 	}
 
 	wake_up_all(&clk->wait);
@@ -558,6 +559,14 @@ nvkm_clk_pwrsrc(struct nvkm_notify *notify)
 		container_of(notify, typeof(*clk), pwrsrc_ntfy);
 	nvkm_pstate_calc(clk, false);
 	return NVKM_NOTIFY_DROP;
+}
+
+int
+nvkm_clk_reclock(struct nvkm_clk *clk)
+{
+	if (clk->allow_reclock)
+		return nvkm_pstate_calc(clk, true);
+	return -ENODEV;
 }
 
 /******************************************************************************
