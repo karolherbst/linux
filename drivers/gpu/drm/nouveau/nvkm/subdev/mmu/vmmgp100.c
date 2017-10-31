@@ -315,7 +315,10 @@ gp100_vmm_flush(struct nvkm_vmm *vmm, int depth)
 int
 gp100_vmm_join(struct nvkm_vmm *vmm, struct nvkm_memory *inst)
 {
-	const u64 base = BIT_ULL(10) /* VER2 */ | BIT_ULL(11); /* 64KiB */
+	const u64 base = BIT_ULL(4) /* FAULT_REPLAY_TEX */ |
+			 BIT_ULL(5) /* FAULT_REPLAY_GCC */ |
+			 BIT_ULL(10) /* VER2 */ |
+			 BIT_ULL(11) /* 64KiB */;
 	return gf100_vmm_join_(vmm, inst, base);
 }
 
