@@ -32,6 +32,7 @@
 #include <engine/cipher.h>
 #include <engine/disp.h>
 #include <engine/dma.h>
+#include <engine/fault.h>
 #include <engine/fifo.h>
 #include <engine/gr.h>
 #include <engine/mpeg.h>

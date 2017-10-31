@@ -63,6 +63,7 @@ nvkm_subdev_name[NVKM_SUBDEV_NR] = {
 	[NVKM_ENGINE_CIPHER  ] = "cipher",
 	[NVKM_ENGINE_DISP    ] = "disp",
 	[NVKM_ENGINE_DMAOBJ  ] = "dma",
+	[NVKM_ENGINE_FAULT   ] = "fault",
 	[NVKM_ENGINE_FIFO    ] = "fifo",
 	[NVKM_ENGINE_GR      ] = "gr",
 	[NVKM_ENGINE_IFB     ] = "ifb",

@@ -2466,6 +2466,7 @@ nvkm_device_engine(struct nvkm_device *device, int index)
 	_(CIPHER , device->cipher  ,  device->cipher);
 	_(DISP   , device->disp    , &device->disp->engine);
 	_(DMAOBJ , device->dma     , &device->dma->engine);
+	_(FAULT  , device->fault   ,  device->fault);
 	_(FIFO   , device->fifo    , &device->fifo->engine);
 	_(GR     , device->gr      , &device->gr->engine);
 	_(IFB    , device->ifb     ,  device->ifb);
@@ -2919,6 +2920,7 @@ nvkm_device_ctor(const struct nvkm_device_func *func,
 		_(NVKM_ENGINE_CIPHER  ,   cipher);
 		_(NVKM_ENGINE_DISP    ,     disp);
 		_(NVKM_ENGINE_DMAOBJ  ,      dma);
+		_(NVKM_ENGINE_FAULT   ,    fault);
 		_(NVKM_ENGINE_FIFO    ,     fifo);
 		_(NVKM_ENGINE_GR      ,       gr);
 		_(NVKM_ENGINE_IFB     ,      ifb);
