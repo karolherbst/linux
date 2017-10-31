@@ -52,6 +52,8 @@
 
 #define NV04_DISP                                     /* cl0046.h */ 0x00000046
 
+#define MAXWELL_FAULT_BUFFER_A                        /* clb069.h */ 0x0000b069
+
 #define NV03_CHANNEL_DMA                              /* cl506b.h */ 0x0000006b
 #define NV10_CHANNEL_DMA                              /* cl506b.h */ 0x0000006e
 #define NV17_CHANNEL_DMA                              /* cl506b.h */ 0x0000176e

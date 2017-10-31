@@ -276,6 +276,7 @@ nvkm_udevice_child_get(struct nvkm_object *object, int index,
 	struct nvkm_device *device = udev->device;
 	struct nvkm_engine *engine;
 	u64 mask = (1ULL << NVKM_ENGINE_DMAOBJ) |
+		   (1ULL << NVKM_ENGINE_FAULT) |
 		   (1ULL << NVKM_ENGINE_FIFO) |
 		   (1ULL << NVKM_ENGINE_DISP) |
 		   (1ULL << NVKM_ENGINE_PM);

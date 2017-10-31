@@ -1,0 +1,4 @@
+nvkm-y += nvkm/engine/fault/base.o
+nvkm-y += nvkm/engine/fault/gp100.o
+
+nvkm-y += nvkm/engine/fault/user.o
