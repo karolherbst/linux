@@ -583,9 +583,11 @@ static void output_poll_execute(struct work_struct *work)
 	if (!drm_kms_helper_poll)
 		goto out;
 
+	drm_modeset_lock_all(dev);
+
 	if (!mutex_trylock(&dev->mode_config.mutex)) {
 		repoll = true;
-		goto out;
+		goto out_drm_unlock;
 	}
 
 	drm_connector_list_iter_begin(dev, &conn_iter);
@@ -646,6 +648,8 @@ static void output_poll_execute(struct work_struct *work)
 
 	mutex_unlock(&dev->mode_config.mutex);
 
+out_drm_unlock:
+	drm_modeset_unlock_all(dev);
 out:
 	if (changed)
 		drm_kms_helper_hotplug_event(dev);
