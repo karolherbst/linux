@@ -165,6 +165,8 @@ int nvkm_vmm_get_locked(struct nvkm_vmm *, bool getref, bool mapref,
 			bool sparse, u8 page, u8 align, u64 size,
 			struct nvkm_vma **pvma);
 void nvkm_vmm_put_locked(struct nvkm_vmm *, struct nvkm_vma *);
+int nvkm_vmm_hmm_init(struct nvkm_vmm *, u64, u64, struct nvkm_vma **);
+void nvkm_vmm_hmm_fini(struct nvkm_vmm *, u64, u64);
 void nvkm_vmm_unmap_locked(struct nvkm_vmm *, struct nvkm_vma *);
 void nvkm_vmm_unmap_region(struct nvkm_vmm *vmm, struct nvkm_vma *vma);
 void nvkm_vmm_hmm_map(struct nvkm_vmm *vmm, u64 addr, u64 npages, u64 *pages);

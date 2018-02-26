@@ -1541,6 +1541,69 @@ nvkm_vmm_get_locked(struct nvkm_vmm *vmm, bool getref, bool mapref, bool sparse,
 }
 
 int
+nvkm_vmm_hmm_init(struct nvkm_vmm *vmm, u64 start, u64 end,
+		  struct nvkm_vma **pvma)
+{
+	struct nvkm_vma *vma = NULL, *tmp;
+	struct rb_node *node;
+
+	/* Locate smallest block that can possibly satisfy the allocation. */
+	node = vmm->free.rb_node;
+	while (node) {
+		struct nvkm_vma *this = rb_entry(node, typeof(*this), tree);
+
+		if (this->addr <= start && (this->addr + this->size) >= end) {
+			rb_erase(&this->tree, &vmm->free);
+			vma = this;
+			break;
+		}
+		node = node->rb_left;
+	}
+
+	if (vma == NULL) {
+		return -EINVAL;
+	}
+
+	if (start != vma->addr) {
+		if (!(tmp = nvkm_vma_tail(vma, vma->size + vma->addr - start))) {
+			nvkm_vmm_put_region(vmm, vma);
+			return -ENOMEM;
+		}
+		nvkm_vmm_free_insert(vmm, vma);
+		vma = tmp;
+	}
+
+	if (end < (vma->addr + vma->size)) {
+		if (!(tmp = nvkm_vma_tail(vma, vma->size + vma->addr - end))) {
+			nvkm_vmm_put_region(vmm, vma);
+			return -ENOMEM;
+		}
+		nvkm_vmm_free_insert(vmm, tmp);
+	}
+
+	vma->mapref = false;
+	vma->sparse = false;
+	vma->page = NVKM_VMA_PAGE_NONE;
+	vma->refd = NVKM_VMA_PAGE_NONE;
+	vma->used = true;
+	nvkm_vmm_node_insert(vmm, vma);
+	*pvma = vma;
+	return 0;
+}
+
+void
+nvkm_vmm_hmm_fini(struct nvkm_vmm *vmm, u64 start, u64 end)
+{
+	struct nvkm_vma *vma;
+	u64 size = (end - start);
+
+	vma = nvkm_vmm_node_search(vmm, start);
+	if (vma && vma->addr == start && vma->size == size) {
+		nvkm_vmm_put_locked(vmm, vma);
+	}
+}
+
+int
 nvkm_vmm_get(struct nvkm_vmm *vmm, u8 page, u64 size, struct nvkm_vma **pvma)
 {
 	int ret;
