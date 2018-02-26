@@ -172,6 +172,13 @@ nouveau_ttm_mmap(struct file *filp, struct vm_area_struct *vma)
 	if (unlikely(vma->vm_pgoff < DRM_FILE_PAGE_OFFSET))
 		return drm_legacy_mmap(filp, vma);
 
+	/* Hack for HMM */
+	if (vma->vm_pgoff < (DRM_FILE_PAGE_OFFSET + (4UL << 30))) {
+		struct nouveau_cli *cli = file_priv->driver_priv;
+
+		return nouveau_vmm_hmm(cli, filp, vma);
+	}
+
 	return ttm_bo_mmap(filp, vma, &drm->ttm.bdev);
 }
 
@@ -305,7 +312,7 @@ nouveau_ttm_init(struct nouveau_drm *drm)
 				  drm->ttm.bo_global_ref.ref.object,
 				  &nouveau_bo_driver,
 				  dev->anon_inode->i_mapping,
-				  DRM_FILE_PAGE_OFFSET,
+				  DRM_FILE_PAGE_OFFSET + (4UL << 30),
 				  drm->client.mmu.dmabits <= 32 ? true : false);
 	if (ret) {
 		NV_ERROR(drm, "error initialising bo driver, %d\n", ret);
