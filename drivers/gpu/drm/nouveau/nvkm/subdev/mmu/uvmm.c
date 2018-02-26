@@ -275,6 +275,43 @@ nvkm_uvmm_mthd_page(struct nvkm_uvmm *uvmm, void *argv, u32 argc)
 }
 
 static int
+nvkm_uvmm_mthd_hmm_init(struct nvkm_uvmm *uvmm, void *argv, u32 argc)
+{
+	union {
+		struct nvif_vmm_hmm_v0 v0;
+	} *args = argv;
+	struct nvkm_vmm *vmm = uvmm->vmm;
+	struct nvkm_vma *vma;
+	int ret = -ENOSYS;
+
+	if ((ret = nvif_unpack(ret, &argv, &argc, args->v0, 0, 0, false)))
+		return ret;
+
+	mutex_lock(&vmm->mutex);
+	ret = nvkm_vmm_hmm_init(vmm, args->v0.start, args->v0.end, &vma);
+	mutex_unlock(&vmm->mutex);
+	return ret;
+}
+
+static int
+nvkm_uvmm_mthd_hmm_fini(struct nvkm_uvmm *uvmm, void *argv, u32 argc)
+{
+	union {
+		struct nvif_vmm_hmm_v0 v0;
+	} *args = argv;
+	struct nvkm_vmm *vmm = uvmm->vmm;
+	int ret = -ENOSYS;
+
+	if ((ret = nvif_unpack(ret, &argv, &argc, args->v0, 0, 0, false)))
+		return ret;
+
+	mutex_lock(&vmm->mutex);
+	nvkm_vmm_hmm_fini(vmm, args->v0.start, args->v0.end);
+	mutex_unlock(&vmm->mutex);
+	return 0;
+}
+
+static int
 nvkm_uvmm_mthd_hmm_map(struct nvkm_uvmm *uvmm, void *argv, u32 argc)
 {
 	union {
@@ -321,6 +358,8 @@ nvkm_uvmm_mthd(struct nvkm_object *object, u32 mthd, void *argv, u32 argc)
 	case NVIF_VMM_V0_PUT      : return nvkm_uvmm_mthd_put      (uvmm, argv, argc);
 	case NVIF_VMM_V0_MAP      : return nvkm_uvmm_mthd_map      (uvmm, argv, argc);
 	case NVIF_VMM_V0_UNMAP    : return nvkm_uvmm_mthd_unmap    (uvmm, argv, argc);
+	case NVIF_VMM_V0_HMM_INIT : return nvkm_uvmm_mthd_hmm_init (uvmm, argv, argc);
+	case NVIF_VMM_V0_HMM_FINI : return nvkm_uvmm_mthd_hmm_fini (uvmm, argv, argc);
 	case NVIF_VMM_V0_HMM_MAP  : return nvkm_uvmm_mthd_hmm_map  (uvmm, argv, argc);
 	case NVIF_VMM_V0_HMM_UNMAP: return nvkm_uvmm_mthd_hmm_unmap(uvmm, argv, argc);
 	default:

@@ -33,6 +33,57 @@ nvif_vmm_unmap(struct nvif_vmm *vmm, u64 addr)
 }
 
 int
+nvif_vmm_hmm_init(struct nvif_vmm *vmm, u64 hstart, u64 hend)
+{
+	struct nvif_vmm_hmm_v0 args;
+	int ret;
+
+	if (hstart > PAGE_SIZE) {
+		args.version = 0;
+		args.start = PAGE_SIZE;
+		args.end = hstart;
+		ret = nvif_object_mthd(&vmm->object, NVIF_VMM_V0_HMM_INIT,
+				       &args, sizeof(args));
+		if (ret)
+			return ret;
+	}
+
+	args.version = 0;
+	args.start = hend;
+	args.end = TASK_SIZE;
+	ret = nvif_object_mthd(&vmm->object, NVIF_VMM_V0_HMM_INIT,
+			       &args, sizeof(args));
+	if (ret && hstart > PAGE_SIZE) {
+		args.version = 0;
+		args.start = PAGE_SIZE;
+		args.end = hstart;
+		nvif_object_mthd(&vmm->object, NVIF_VMM_V0_HMM_FINI,
+				 &args, sizeof(args));
+	}
+	return ret;
+}
+
+void
+nvif_vmm_hmm_fini(struct nvif_vmm *vmm, u64 hstart, u64 hend)
+{
+	struct nvif_vmm_hmm_v0 args;
+
+	if (hstart > PAGE_SIZE) {
+		args.version = 0;
+		args.start = PAGE_SIZE;
+		args.end = hstart;
+		nvif_object_mthd(&vmm->object, NVIF_VMM_V0_HMM_FINI,
+				 &args, sizeof(args));
+	}
+
+	args.version = 0;
+	args.start = hend;
+	args.end = TASK_SIZE;
+	nvif_object_mthd(&vmm->object, NVIF_VMM_V0_HMM_FINI,
+			 &args, sizeof(args));
+}
+
+int
 nvif_vmm_hmm_map(struct nvif_vmm *vmm, u64 addr, u64 npages, u64 *pages)
 {
 	struct nvif_vmm_hmm_map_v0 args;
