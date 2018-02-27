@@ -67,6 +67,77 @@ gp100_vmm_pgt_dma(struct nvkm_vmm *vmm, struct nvkm_mmu_pt *pt,
 	VMM_MAP_ITER_DMA(vmm, pt, ptei, ptes, map, gp100_vmm_pgt_pte);
 }
 
+static int
+gp100_vmm_pgt_hmm_map(struct nvkm_vmm *vmm, struct nvkm_mmu_pt *pt,
+		      u32 ptei, u32 ptes, u64 *pages)
+{
+	int mapped = 0;
+
+	nvkm_kmap(pt->memory);
+	while (ptes--) {
+		u64 data = nvkm_ro64(pt->memory, pt->base + ptei * 8);
+		u64 page = *pages;
+		struct page *tmp;
+		dma_addr_t dma;
+
+		if (!(page & NV_HMM_PAGE_FLAG_V)) {
+			pages++; ptei++;
+			continue;
+		}
+
+		if ((data & 1)) {
+			*pages |= NV_HMM_PAGE_FLAG_V;
+			pages++; ptei++;
+			continue;
+		}
+
+		tmp = pfn_to_page(page >> NV_HMM_PAGE_PFN_SHIFT);
+		dma = dma_map_page(vmm->mmu->subdev.device->dev, tmp,
+				   0, PAGE_SIZE, DMA_BIDIRECTIONAL);
+		if (dma_mapping_error(vmm->mmu->subdev.device->dev, dma)) {
+			*pages = NV_HMM_PAGE_VALUE_E;
+			pages++; ptei++;
+			continue;
+		}
+
+		data = (2 << 1);
+		data |= ((dma >> PAGE_SHIFT) << 8);
+		data |= page & NV_HMM_PAGE_FLAG_V ? (1 << 0) : 0;
+		data |= page & NV_HMM_PAGE_FLAG_W ? 0 : (1 << 6);
+
+		VMM_WO064(pt, vmm, ptei++ * 8, data);
+		mapped++;
+		pages++;
+	}
+	nvkm_done(pt->memory);
+
+	return mapped;
+}
+
+static int
+gp100_vmm_pgt_hmm_unmap(struct nvkm_vmm *vmm, struct nvkm_mmu_pt *pt,
+			u32 ptei, u32 ptes, u64 *pages)
+{
+	int unmapped = 0;
+
+	nvkm_kmap(pt->memory);
+	while (ptes--) {
+		u64 data = nvkm_ro64(pt->memory, pt->base + ptei * 8);
+
+		if (!(data & 1)) {
+			VMM_WO064(pt, vmm, ptei++ * 8, 0UL);
+			continue;
+		}
+
+		/* Clear valid but keep pte value so we can dma_unmap() */
+		VMM_WO064(pt, vmm, ptei++ * 8, data ^ 1);
+		unmapped++;
+	}
+	nvkm_done(pt->memory);
+
+	return unmapped;
+}
+
 static void
 gp100_vmm_pgt_mem(struct nvkm_vmm *vmm, struct nvkm_mmu_pt *pt,
 		  u32 ptei, u32 ptes, struct nvkm_vmm_map *map)
@@ -89,6 +160,8 @@ gp100_vmm_desc_spt = {
 	.mem = gp100_vmm_pgt_mem,
 	.dma = gp100_vmm_pgt_dma,
 	.sgl = gp100_vmm_pgt_sgl,
+	.hmm_map = gp100_vmm_pgt_hmm_map,
+	.hmm_unmap = gp100_vmm_pgt_hmm_unmap,
 };
 
 static void

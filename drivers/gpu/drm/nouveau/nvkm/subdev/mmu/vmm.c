@@ -75,7 +75,7 @@ struct nvkm_vmm_iter {
 	struct nvkm_vmm *vmm;
 	u64 cnt;
 	u16 max, lvl;
-	u64 start, addr;
+	u64 start, addr, *pages;
 	u32 pte[NVKM_VMM_LEVELS_MAX];
 	struct nvkm_vmm_pt *pt[NVKM_VMM_LEVELS_MAX];
 	int flush;
@@ -281,6 +281,59 @@ nvkm_vmm_unref_ptes(struct nvkm_vmm_iter *it, u32 ptei, u32 ptes)
 	return true;
 }
 
+static bool
+nvkm_vmm_unref_hmm_ptes(struct nvkm_vmm_iter *it, u32 ptei, u32 ptes)
+{
+	const struct nvkm_vmm_desc *desc = it->desc;
+	const int type = desc->type == SPT;
+	struct nvkm_vmm_pt *pgt = it->pt[0];
+	struct nvkm_mmu_pt *pt;
+	int mapped;
+
+	pt = pgt->pt[type];
+	mapped = desc->func->hmm_unmap(it->vmm, pt, ptei, ptes, NULL);
+	if (mapped <= 0)
+		return false;
+	ptes = mapped;
+
+	/* Dual-PTs need special handling, unless PDE becoming invalid. */
+	if (desc->type == SPT && (pgt->refs[0] || pgt->refs[1]))
+		nvkm_vmm_unref_sptes(it, pgt, desc, ptei, ptes);
+
+	/* GPU may have cached the PTs, flush before freeing. */
+	nvkm_vmm_flush_mark(it);
+	nvkm_vmm_flush(it);
+
+	nvkm_kmap(pt->memory);
+	while (mapped--) {
+		u64 data = nvkm_ro64(pt->memory, pt->base + ptei * 8);
+		dma_addr_t dma = (data >> 8) << 12;
+
+		if (!data) {
+			ptei++;
+			continue;
+		}
+		dma_unmap_page(it->vmm->mmu->subdev.device->dev, dma,
+			       PAGE_SIZE, DMA_BIDIRECTIONAL);
+		VMM_WO064(pt, it->vmm, ptei++ * 8, 0UL);
+	}
+	nvkm_done(pt->memory);
+
+	/* Drop PTE references. */
+	pgt->refs[type] -= ptes;
+
+	/* PT no longer neeed?  Destroy it. */
+	if (!pgt->refs[type]) {
+		it->lvl++;
+		TRA(it, "%s empty", nvkm_vmm_desc_type(desc));
+		it->lvl--;
+		nvkm_vmm_unref_pdes(it);
+		return false; /* PTE writes for unmap() not necessary. */
+	}
+
+	return true;
+}
+
 static void
 nvkm_vmm_ref_sptes(struct nvkm_vmm_iter *it, struct nvkm_vmm_pt *pgt,
 		   const struct nvkm_vmm_desc *desc, u32 ptei, u32 ptes)
@@ -347,6 +400,32 @@ nvkm_vmm_ref_sptes(struct nvkm_vmm_iter *it, struct nvkm_vmm_pt *pgt,
 			pair->func->unmap(vmm, pgt->pt[0], pteb, ptes);
 		}
 	}
+}
+
+static bool
+nvkm_vmm_ref_hmm_ptes(struct nvkm_vmm_iter *it, u32 ptei, u32 ptes)
+{
+	const struct nvkm_vmm_desc *desc = it->desc;
+	const int type = desc->type == SPT;
+	struct nvkm_vmm_pt *pgt = it->pt[0];
+	struct nvkm_mmu_pt *pt;
+	int mapped;
+
+	pt = pgt->pt[type];
+	mapped = desc->func->hmm_map(it->vmm, pt, ptei, ptes,
+			&it->pages[(it->addr - it->start) >> PAGE_SHIFT]);
+	if (mapped <= 0)
+		return false;
+	ptes = mapped;
+
+	/* Take PTE references. */
+	pgt->refs[type] += ptes;
+
+	/* Dual-PTs need special handling. */
+	if (desc->type == SPT)
+		nvkm_vmm_ref_sptes(it, pgt, desc, ptei, ptes);
+
+	return true;
 }
 
 static bool
@@ -520,6 +599,7 @@ nvkm_vmm_iter(struct nvkm_vmm *vmm, const struct nvkm_vmm_page *page,
 	it.cnt = size >> page->shift;
 	it.flush = NVKM_VMM_LEVELS_MAX;
 	it.start = it.addr = addr;
+	it.pages = map ? map->pages : NULL;
 
 	/* Deconstruct address into PTE indices for each mapping level. */
 	for (it.lvl = 0; desc[it.lvl].bits; it.lvl++) {
@@ -1182,6 +1262,29 @@ nvkm_vmm_map(struct nvkm_vmm *vmm, struct nvkm_vma *vma, void *argv, u32 argc,
 	vma->busy = false;
 	mutex_unlock(&vmm->mutex);
 	return ret;
+}
+
+void
+nvkm_vmm_hmm_map(struct nvkm_vmm *vmm, u64 addr, u64 npages, u64 *pages)
+{
+	struct nvkm_vmm_map map = {0};
+
+	for (map.page = vmm->func->page; map.page->shift != 12; map.page++);
+	map.pages = pages;
+
+	nvkm_vmm_iter(vmm, map.page, addr, npages << PAGE_SHIFT, "ref + map",
+		      true, nvkm_vmm_ref_hmm_ptes, NULL, &map, NULL);
+}
+
+void
+nvkm_vmm_hmm_unmap(struct nvkm_vmm *vmm, u64 addr, u64 npages)
+{
+	struct nvkm_vmm_map map = {0};
+
+	for (map.page = vmm->func->page; map.page->shift != 12; map.page++);
+
+	nvkm_vmm_iter(vmm, map.page, addr, npages << PAGE_SHIFT, "unmap + unref",
+		      false, nvkm_vmm_unref_hmm_ptes, NULL, NULL, NULL);
 }
 
 static void

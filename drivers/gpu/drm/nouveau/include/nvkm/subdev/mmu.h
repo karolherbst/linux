@@ -2,6 +2,21 @@
 #ifndef __NVKM_MMU_H__
 #define __NVKM_MMU_H__
 #include <core/subdev.h>
+#include <linux/hmm.h>
+
+/* Need to change HMM to be more driver friendly */
+#if IS_ENABLED(CONFIG_HMM)
+#else
+typedef unsigned long hmm_pfn_t;
+#define HMM_PFN_VALID (1 << 0)
+#define HMM_PFN_READ (1 << 1)
+#define HMM_PFN_WRITE (1 << 2)
+#define HMM_PFN_ERROR (1 << 3)
+#define HMM_PFN_EMPTY (1 << 4)
+#define HMM_PFN_SPECIAL (1 << 5)
+#define HMM_PFN_DEVICE_UNADDRESSABLE (1 << 6)
+#define HMM_PFN_SHIFT 7
+#endif
 
 struct nvkm_vma {
 	struct list_head head;
@@ -56,6 +71,7 @@ void nvkm_vmm_part(struct nvkm_vmm *, struct nvkm_memory *inst);
 int nvkm_vmm_get(struct nvkm_vmm *, u8 page, u64 size, struct nvkm_vma **);
 void nvkm_vmm_put(struct nvkm_vmm *, struct nvkm_vma **);
 
+
 struct nvkm_vmm_map {
 	struct nvkm_memory *memory;
 	u64 offset;
@@ -63,6 +79,13 @@ struct nvkm_vmm_map {
 	struct nvkm_mm_node *mem;
 	struct scatterlist *sgl;
 	dma_addr_t *dma;
+#define NV_HMM_PAGE_FLAG_V (1 << 0)
+#define NV_HMM_PAGE_FLAG_W (1 << 1)
+#define NV_HMM_PAGE_VALUE_N 0
+#define NV_HMM_PAGE_VALUE_E (-1UL)
+#define NV_HMM_PAGE_VALUE_S (-1ULL)
+#define NV_HMM_PAGE_PFN_SHIFT 8
+	u64 *pages;
 	u64 off;
 
 	const struct nvkm_vmm_page *page;

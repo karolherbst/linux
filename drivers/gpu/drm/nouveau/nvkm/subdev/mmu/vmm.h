@@ -56,6 +56,8 @@ typedef void (*nvkm_vmm_pde_func)(struct nvkm_vmm *,
 				  struct nvkm_vmm_pt *, u32 pdei);
 typedef void (*nvkm_vmm_pte_func)(struct nvkm_vmm *, struct nvkm_mmu_pt *,
 				  u32 ptei, u32 ptes, struct nvkm_vmm_map *);
+typedef int (*nvkm_vmm_hmm_func)(struct nvkm_vmm *, struct nvkm_mmu_pt *,
+				 u32 ptei, u32 ptes, u64 *pages);
 
 struct nvkm_vmm_desc_func {
 	nvkm_vmm_pxe_func invalid;
@@ -67,6 +69,8 @@ struct nvkm_vmm_desc_func {
 	nvkm_vmm_pte_func mem;
 	nvkm_vmm_pte_func dma;
 	nvkm_vmm_pte_func sgl;
+	nvkm_vmm_hmm_func hmm_map;
+	nvkm_vmm_hmm_func hmm_unmap;
 };
 
 extern const struct nvkm_vmm_desc_func gf100_vmm_pgd;
@@ -163,6 +167,8 @@ int nvkm_vmm_get_locked(struct nvkm_vmm *, bool getref, bool mapref,
 void nvkm_vmm_put_locked(struct nvkm_vmm *, struct nvkm_vma *);
 void nvkm_vmm_unmap_locked(struct nvkm_vmm *, struct nvkm_vma *);
 void nvkm_vmm_unmap_region(struct nvkm_vmm *vmm, struct nvkm_vma *vma);
+void nvkm_vmm_hmm_map(struct nvkm_vmm *vmm, u64 addr, u64 npages, u64 *pages);
+void nvkm_vmm_hmm_unmap(struct nvkm_vmm *vmm, u64 addr, u64 npages);
 
 struct nvkm_vma *nvkm_vma_tail(struct nvkm_vma *, u64 tail);
 void nvkm_vmm_node_insert(struct nvkm_vmm *, struct nvkm_vma *);
