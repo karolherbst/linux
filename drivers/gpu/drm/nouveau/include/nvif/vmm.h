@@ -39,4 +39,6 @@ void nvif_vmm_put(struct nvif_vmm *, struct nvif_vma *);
 int nvif_vmm_map(struct nvif_vmm *, u64 addr, u64 size, void *argv, u32 argc,
 		 struct nvif_mem *, u64 offset);
 int nvif_vmm_unmap(struct nvif_vmm *, u64);
+int nvif_vmm_hmm_map(struct nvif_vmm *vmm, u64 addr, u64 npages, u64 *pages);
+int nvif_vmm_hmm_unmap(struct nvif_vmm *vmm, u64 addr, u64 npages);
 #endif

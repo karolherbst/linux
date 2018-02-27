@@ -14,6 +14,8 @@ struct nvif_vmm_v0 {
 #define NVIF_VMM_V0_PUT                                                    0x02
 #define NVIF_VMM_V0_MAP                                                    0x03
 #define NVIF_VMM_V0_UNMAP                                                  0x04
+#define NVIF_VMM_V0_HMM_MAP                                                0x05
+#define NVIF_VMM_V0_HMM_UNMAP                                              0x06
 
 struct nvif_vmm_page_v0 {
 	__u8  version;
@@ -60,5 +62,20 @@ struct nvif_vmm_unmap_v0 {
 	__u8  version;
 	__u8  pad01[7];
 	__u64 addr;
+};
+
+struct nvif_vmm_hmm_map_v0 {
+	__u8  version;
+	__u8  pad01[7];
+	__u64 addr;
+	__u64 npages;
+	__u64 pages;
+};
+
+struct nvif_vmm_hmm_unmap_v0 {
+	__u8  version;
+	__u8  pad01[7];
+	__u64 addr;
+	__u64 npages;
 };
 #endif

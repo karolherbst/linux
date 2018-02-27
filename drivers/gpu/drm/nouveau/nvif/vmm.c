@@ -33,6 +33,35 @@ nvif_vmm_unmap(struct nvif_vmm *vmm, u64 addr)
 }
 
 int
+nvif_vmm_hmm_map(struct nvif_vmm *vmm, u64 addr, u64 npages, u64 *pages)
+{
+	struct nvif_vmm_hmm_map_v0 args;
+	int ret;
+
+	args.version = 0;
+	args.addr = addr;
+	args.npages = npages;
+	args.pages = (uint64_t)pages;
+	ret = nvif_object_mthd(&vmm->object, NVIF_VMM_V0_HMM_MAP,
+			       &args, sizeof(args));
+	return ret;
+}
+
+int
+nvif_vmm_hmm_unmap(struct nvif_vmm *vmm, u64 addr, u64 npages)
+{
+	struct nvif_vmm_hmm_unmap_v0 args;
+	int ret;
+
+	args.version = 0;
+	args.addr = addr;
+	args.npages = npages;
+	ret = nvif_object_mthd(&vmm->object, NVIF_VMM_V0_HMM_UNMAP,
+			       &args, sizeof(args));
+	return ret;
+}
+
+int
 nvif_vmm_map(struct nvif_vmm *vmm, u64 addr, u64 size, void *argv, u32 argc,
 	     struct nvif_mem *mem, u64 offset)
 {

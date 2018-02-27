@@ -275,15 +275,54 @@ nvkm_uvmm_mthd_page(struct nvkm_uvmm *uvmm, void *argv, u32 argc)
 }
 
 static int
+nvkm_uvmm_mthd_hmm_map(struct nvkm_uvmm *uvmm, void *argv, u32 argc)
+{
+	union {
+		struct nvif_vmm_hmm_map_v0 v0;
+	} *args = argv;
+	struct nvkm_vmm *vmm = uvmm->vmm;
+	int ret = -ENOSYS;
+
+	if ((ret = nvif_unpack(ret, &argv, &argc, args->v0, 0, 0, false)))
+		return ret;
+
+	mutex_lock(&vmm->mutex);
+	nvkm_vmm_hmm_map(vmm, args->v0.addr, args->v0.npages,
+			(u64 *)args->v0.pages);
+	mutex_unlock(&vmm->mutex);
+	return 0;
+}
+
+static int
+nvkm_uvmm_mthd_hmm_unmap(struct nvkm_uvmm *uvmm, void *argv, u32 argc)
+{
+	union {
+		struct nvif_vmm_hmm_unmap_v0 v0;
+	} *args = argv;
+	struct nvkm_vmm *vmm = uvmm->vmm;
+	int ret = -ENOSYS;
+
+	if ((ret = nvif_unpack(ret, &argv, &argc, args->v0, 0, 0, false)))
+		return ret;
+
+	mutex_lock(&vmm->mutex);
+	nvkm_vmm_hmm_unmap(vmm, args->v0.addr, args->v0.npages);
+	mutex_unlock(&vmm->mutex);
+	return 0;
+}
+
+static int
 nvkm_uvmm_mthd(struct nvkm_object *object, u32 mthd, void *argv, u32 argc)
 {
 	struct nvkm_uvmm *uvmm = nvkm_uvmm(object);
 	switch (mthd) {
-	case NVIF_VMM_V0_PAGE  : return nvkm_uvmm_mthd_page  (uvmm, argv, argc);
-	case NVIF_VMM_V0_GET   : return nvkm_uvmm_mthd_get   (uvmm, argv, argc);
-	case NVIF_VMM_V0_PUT   : return nvkm_uvmm_mthd_put   (uvmm, argv, argc);
-	case NVIF_VMM_V0_MAP   : return nvkm_uvmm_mthd_map   (uvmm, argv, argc);
-	case NVIF_VMM_V0_UNMAP : return nvkm_uvmm_mthd_unmap (uvmm, argv, argc);
+	case NVIF_VMM_V0_PAGE     : return nvkm_uvmm_mthd_page     (uvmm, argv, argc);
+	case NVIF_VMM_V0_GET      : return nvkm_uvmm_mthd_get      (uvmm, argv, argc);
+	case NVIF_VMM_V0_PUT      : return nvkm_uvmm_mthd_put      (uvmm, argv, argc);
+	case NVIF_VMM_V0_MAP      : return nvkm_uvmm_mthd_map      (uvmm, argv, argc);
+	case NVIF_VMM_V0_UNMAP    : return nvkm_uvmm_mthd_unmap    (uvmm, argv, argc);
+	case NVIF_VMM_V0_HMM_MAP  : return nvkm_uvmm_mthd_hmm_map  (uvmm, argv, argc);
+	case NVIF_VMM_V0_HMM_UNMAP: return nvkm_uvmm_mthd_hmm_unmap(uvmm, argv, argc);
 	default:
 		break;
 	}

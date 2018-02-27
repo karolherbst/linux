@@ -4,20 +4,6 @@
 #include <core/subdev.h>
 #include <linux/hmm.h>
 
-/* Need to change HMM to be more driver friendly */
-#if IS_ENABLED(CONFIG_HMM)
-#else
-typedef unsigned long hmm_pfn_t;
-#define HMM_PFN_VALID (1 << 0)
-#define HMM_PFN_READ (1 << 1)
-#define HMM_PFN_WRITE (1 << 2)
-#define HMM_PFN_ERROR (1 << 3)
-#define HMM_PFN_EMPTY (1 << 4)
-#define HMM_PFN_SPECIAL (1 << 5)
-#define HMM_PFN_DEVICE_UNADDRESSABLE (1 << 6)
-#define HMM_PFN_SHIFT 7
-#endif
-
 struct nvkm_vma {
 	struct list_head head;
 	struct rb_node tree;
