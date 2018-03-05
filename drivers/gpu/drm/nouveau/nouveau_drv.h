@@ -65,6 +65,7 @@ struct platform_device;
 #include "nouveau_fence.h"
 #include "nouveau_bios.h"
 #include "nouveau_vmm.h"
+#include "nouveau_hmm.h"
 
 struct nouveau_drm_tile {
 	struct nouveau_fence *fence;
@@ -103,6 +104,8 @@ struct nouveau_cli {
 	struct list_head objects;
 	struct list_head notifys;
 	char name[32];
+
+	struct nouveau_hmm hmm;
 
 	struct work_struct work;
 	struct list_head worker;

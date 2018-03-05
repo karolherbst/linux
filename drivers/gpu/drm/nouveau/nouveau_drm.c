@@ -167,6 +167,7 @@ nouveau_cli_work(struct work_struct *w)
 static void
 nouveau_cli_fini(struct nouveau_cli *cli)
 {
+	nouveau_hmm_fini(cli);
 	nouveau_cli_work_flush(cli, true);
 	usif_client_fini(cli);
 	nouveau_vmm_fini(&cli->vmm);
@@ -964,6 +965,10 @@ nouveau_drm_open(struct drm_device *dev, struct drm_file *fpriv)
 	mutex_lock(&drm->client.mutex);
 	list_add(&cli->head, &drm->clients);
 	mutex_unlock(&drm->client.mutex);
+
+	ret = nouveau_hmm_init(cli);
+	if (ret)
+		return ret;
 
 done:
 	if (ret && cli) {
