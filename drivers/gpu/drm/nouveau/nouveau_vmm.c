@@ -115,6 +115,89 @@ done:
 	return ret;
 }
 
+static int
+vmm_hole_fault(struct vm_fault *vmf)
+{
+	return VM_FAULT_SIGBUS;
+}
+
+static void
+vmm_hole_open(struct vm_area_struct *vma)
+{
+	struct nouveau_cli *cli = vma->vm_private_data;
+	struct nouveau_vmm_hole *hole = &cli->hmm.hole;
+
+	/*
+	 * No need for atomic this happen under mmap_sem write lock. Make sure
+	 * this assumption holds with a BUG_ON()
+	 */
+	BUG_ON(down_read_trylock(&vma->vm_mm->mmap_sem));
+	hole->count++;
+}
+
+static void
+vmm_hole_close(struct vm_area_struct *vma)
+{
+	struct nouveau_cli *cli = vma->vm_private_data;
+	struct nouveau_vmm_hole *hole = &cli->hmm.hole;
+
+	/*
+	 * No need for atomic this happen under mmap_sem write lock with one
+	 * exception when a process is being kill (from do_exit()). For that
+	 * reasons we don't test with BUG_ON().
+	 */
+	if ((--hole->count) <= 0) {
+		nouveau_vmm_hmm_release(&cli->hmm.mirror);
+		hole->vma = NULL;
+	}
+}
+
+static int
+vmm_hole_access(struct vm_area_struct *vma, unsigned long addr,
+		void *buf, int len, int write)
+{
+	return -EIO;
+}
+
+static const struct vm_operations_struct vmm_hole_vm_ops = {
+	.access = vmm_hole_access,
+	.close = vmm_hole_close,
+	.fault = vmm_hole_fault,
+	.open = vmm_hole_open,
+};
+
+int
+nouveau_vmm_hmm(struct nouveau_cli *cli, struct file *file,
+		struct vm_area_struct *vma)
+{
+	struct nouveau_vmm_hole *hole = &cli->hmm.hole;
+	unsigned long size = vma->vm_end - vma->vm_start;
+	unsigned long pgsize = size >> PAGE_SHIFT;
+	int ret;
+
+	if ((vma->vm_pgoff + pgsize) > (DRM_FILE_PAGE_OFFSET + (4UL << 30)))
+		return -EINVAL;
+
+	if (!cli->hmm.enabled)
+		return -EINVAL;
+
+	hole->vma = vma;
+	hole->cli = cli;
+	hole->file = file;
+	hole->start = vma->vm_start;
+	hole->end = vma->vm_end;
+	hole->count = 1;
+
+	ret = nvif_vmm_hmm_init(&cli->vmm.vmm, vma->vm_start, vma->vm_end);
+	if (ret)
+		return ret;
+
+	vma->vm_private_data = cli;
+	vma->vm_ops = &vmm_hole_vm_ops;
+	vma->vm_flags |= VM_DONTEXPAND | VM_DONTDUMP;
+	return 0;
+}
+
 void
 nouveau_vmm_fini(struct nouveau_vmm *vmm)
 {

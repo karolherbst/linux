@@ -13,6 +13,15 @@ struct nouveau_vma {
 	struct nouveau_mem *mem;
 };
 
+struct nouveau_vmm_hole {
+	struct vm_area_struct *vma;
+	struct nouveau_cli *cli;
+	struct file *file;
+	unsigned long start;
+	unsigned long end;
+	int count;
+};
+
 struct nouveau_vma *nouveau_vma_find(struct nouveau_bo *, struct nouveau_vmm *);
 int nouveau_vma_new(struct nouveau_bo *, struct nouveau_vmm *,
 		    struct nouveau_vma **);
@@ -25,6 +34,9 @@ struct nouveau_vmm {
 	struct nvif_vmm vmm;
 	struct nvkm_vm *vm;
 };
+
+int nouveau_vmm_hmm(struct nouveau_cli *cli, struct file *file,
+		    struct vm_area_struct *vma);
 
 int nouveau_vmm_init(struct nouveau_cli *, s32 oclass, struct nouveau_vmm *);
 void nouveau_vmm_fini(struct nouveau_vmm *);

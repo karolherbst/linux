@@ -294,6 +294,31 @@ nouveau_vmm_sync_pagetables(struct hmm_mirror *mirror,
 			    unsigned long start,
 			    unsigned long end)
 {
+	struct nouveau_hmm *hmm;
+	struct nouveau_cli *cli;
+
+	hmm = container_of(mirror, struct nouveau_hmm, mirror);
+	if (!hmm->hole.vma || hmm->hole.start == hmm->hole.end)
+		return;
+
+	/* Ignore area inside hole */
+	end = min(end, TASK_SIZE);
+	if (start >= hmm->hole.start && end <= hmm->hole.end)
+		return;
+	if (start < hmm->hole.start && end > hmm->hole.start) {
+		nouveau_vmm_sync_pagetables(mirror, update, start,
+					    hmm->hole.start);
+		start = hmm->hole.end;
+	} else if (start < hmm->hole.end && start >= hmm->hole.start) {
+		start = hmm->hole.end;
+	}
+	if (end <= start)
+		return;
+
+	cli = container_of(hmm, struct nouveau_cli, hmm);
+	mutex_lock(&hmm->mutex);
+	nvif_vmm_hmm_unmap(&cli->vmm.vmm, start, (end - start) >> PAGE_SHIFT);
+	mutex_unlock(&hmm->mutex);
 }
 
 void
@@ -311,6 +336,7 @@ nouveau_vmm_hmm_release(struct hmm_mirror *mirror)
 	nvif_object_fini(&hmm->rpfb);
 	cli = container_of(hmm, struct nouveau_cli, hmm);
 
+	nvif_vmm_hmm_fini(&cli->vmm.vmm, hmm->hole.start, hmm->hole.end);
 	nouveau_vmm_sync_pagetables(&hmm->mirror, HMM_UPDATE_INVALIDATE,
 				    PAGE_SIZE, TASK_SIZE);
 }

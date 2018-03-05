@@ -33,6 +33,7 @@
 #if defined(CONFIG_HMM_MIRROR) && defined(CONFIG_DEVICE_PRIVATE)
 
 struct nouveau_hmm {
+	struct nouveau_vmm_hole hole;
 	struct nvif_object rpfb;
 	struct nvif_notify pending;
 	struct task_struct *task;
