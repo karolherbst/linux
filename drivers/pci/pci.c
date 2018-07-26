@@ -636,6 +636,7 @@ static int pci_raw_set_power_state(struct pci_dev *dev, pci_power_t state)
 {
 	u16 pmcsr;
 	bool need_restore = false;
+	int ret;
 
 	/* Check if we're already there */
 	if (dev->current_state == state)
@@ -663,7 +664,11 @@ static int pci_raw_set_power_state(struct pci_dev *dev, pci_power_t state)
 	   || (state == PCI_D2 && !dev->d2_support))
 		return -EIO;
 
-	pci_read_config_word(dev, dev->pm_cap + PCI_PM_CTRL, &pmcsr);
+
+	ret = pci_read_config_word(dev, dev->pm_cap + PCI_PM_CTRL, &	pmcsr);
+	pci_info(dev, "read pmcsr %x\n", pmcsr);
+	if (ret || pmcsr == 0xffff)
+		pci_info(dev, "read pmcsr failed %x %x\n", ret, pmcsr);
 
 	/* If we're (effectively) in D3, force entire word to 0.
 	 * This doesn't affect PME_Status, disables PME_En, and
@@ -689,6 +694,7 @@ static int pci_raw_set_power_state(struct pci_dev *dev, pci_power_t state)
 	}
 
 	/* enter specified state */
+	pci_info(dev, "write pmcsr %x\n", pmcsr);
 	if (dev->vendor != 0x10de)
 		pci_write_config_word(dev, dev->pm_cap + PCI_PM_CTRL, pmcsr);
 
@@ -701,10 +707,27 @@ static int pci_raw_set_power_state(struct pci_dev *dev, pci_power_t state)
 
 	if (dev->vendor != 0x10de)
 		pci_read_config_word(dev, dev->pm_cap + PCI_PM_CTRL, &pmcsr);
+	pci_info(dev, "read2 pmcsr %x\n", pmcsr);
+
 	dev->current_state = (pmcsr & PCI_PM_CTRL_STATE_MASK);
-	if (dev->current_state != state && printk_ratelimit())
+	if (dev->current_state != state && printk_ratelimit()) {
 		pci_info(dev, "Refused to change power state, currently in D%d\n",
 			 dev->current_state);
+		WARN(true, "Refused to change power state, this is clearly a bug\n");
+
+		mdelay(100);
+
+		if (dev->vendor != 0x10de)
+			pci_read_config_word(dev, dev->pm_cap + PCI_PM_CTRL, &pmcsr);
+		dev->current_state = (pmcsr & PCI_PM_CTRL_STATE_MASK);
+		if (dev->current_state != state && printk_ratelimit()) {
+			pci_info(dev, "Refused to change power state, currently in D%d\n",
+				 dev->current_state);
+			WARN(true, "workaround sleep(1) didn't help\n");
+		} else {
+			WARN(true, "workaround sleep(1) helped\n");
+		}
+	}
 
 	/*
 	 * According to section 5.4.1 of the "PCI BUS POWER MANAGEMENT
@@ -1450,6 +1473,7 @@ EXPORT_SYMBOL(pci_enable_device_mem);
  */
 int pci_enable_device(struct pci_dev *dev)
 {
+	pci_info(dev, "called pci_enable_device\n");
 	return pci_enable_device_flags(dev, IORESOURCE_MEM | IORESOURCE_IO);
 }
 EXPORT_SYMBOL(pci_enable_device);
@@ -1643,6 +1667,8 @@ void pci_disable_enabled_device(struct pci_dev *dev)
 void pci_disable_device(struct pci_dev *dev)
 {
 	struct pci_devres *dr;
+
+	pci_info(dev, "called pci_disable_device\n");
 
 	dr = find_pci_dr(dev);
 	if (dr)
