@@ -689,7 +689,8 @@ static int pci_raw_set_power_state(struct pci_dev *dev, pci_power_t state)
 	}
 
 	/* enter specified state */
-	pci_write_config_word(dev, dev->pm_cap + PCI_PM_CTRL, pmcsr);
+	if (dev->vendor != 0x10de)
+		pci_write_config_word(dev, dev->pm_cap + PCI_PM_CTRL, pmcsr);
 
 	/* Mandatory power management transition delays */
 	/* see PCI PM 1.1 5.6.1 table 18 */
@@ -698,7 +699,8 @@ static int pci_raw_set_power_state(struct pci_dev *dev, pci_power_t state)
 	else if (state == PCI_D2 || dev->current_state == PCI_D2)
 		udelay(PCI_PM_D2_DELAY);
 
-	pci_read_config_word(dev, dev->pm_cap + PCI_PM_CTRL, &pmcsr);
+	if (dev->vendor != 0x10de)
+		pci_read_config_word(dev, dev->pm_cap + PCI_PM_CTRL, &pmcsr);
 	dev->current_state = (pmcsr & PCI_PM_CTRL_STATE_MASK);
 	if (dev->current_state != state && printk_ratelimit())
 		pci_info(dev, "Refused to change power state, currently in D%d\n",
@@ -743,7 +745,7 @@ void pci_update_current_state(struct pci_dev *dev, pci_power_t state)
 	if (platform_pci_get_power_state(dev) == PCI_D3cold ||
 	    !pci_device_is_present(dev)) {
 		dev->current_state = PCI_D3cold;
-	} else if (dev->pm_cap) {
+	} else if (dev->pm_cap && dev->vendor != 0x10de) {
 		u16 pmcsr;
 
 		pci_read_config_word(dev, dev->pm_cap + PCI_PM_CTRL, &pmcsr);
