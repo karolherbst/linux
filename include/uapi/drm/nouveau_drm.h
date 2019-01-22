@@ -133,6 +133,7 @@ struct drm_nouveau_gem_cpu_fini {
 #define DRM_NOUVEAU_NOTIFIEROBJ_ALLOC  0x05 /* deprecated */
 #define DRM_NOUVEAU_GPUOBJ_FREE        0x06 /* deprecated */
 #define DRM_NOUVEAU_NVIF               0x07
+#define DRM_NOUVEAU_CHANNEL_KILLED     0x08 /* deprecated */
 #define DRM_NOUVEAU_GEM_NEW            0x40
 #define DRM_NOUVEAU_GEM_PUSHBUF        0x41
 #define DRM_NOUVEAU_GEM_CPU_PREP       0x42

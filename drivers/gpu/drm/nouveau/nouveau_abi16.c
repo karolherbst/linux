@@ -424,6 +424,23 @@ nouveau_abi16_ioctl_channel_free(ABI16_IOCTL_ARGS)
 }
 
 int
+nouveau_abi16_ioctl_channel_killed(ABI16_IOCTL_ARGS)
+{
+	struct drm_nouveau_channel_killed *req = data;
+	struct nouveau_abi16 *abi16 = nouveau_abi16_get(file_priv);
+	struct nouveau_abi16_chan *chan;
+
+	if (unlikely(!abi16))
+		return -ENOMEM;
+
+	chan = nouveau_abi16_chan(abi16, req->channel);
+	if (!chan)
+		return nouveau_abi16_put(abi16, -ENOENT);
+	req->killed = atomic_read(&chan->chan->killed);
+	return nouveau_abi16_put(abi16, 0);
+}
+
+int
 nouveau_abi16_ioctl_grobj_alloc(ABI16_IOCTL_ARGS)
 {
 	struct drm_nouveau_grobj_alloc *init = data;

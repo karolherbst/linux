@@ -9,6 +9,7 @@ int nouveau_abi16_ioctl_getparam(ABI16_IOCTL_ARGS);
 int nouveau_abi16_ioctl_setparam(ABI16_IOCTL_ARGS);
 int nouveau_abi16_ioctl_channel_alloc(ABI16_IOCTL_ARGS);
 int nouveau_abi16_ioctl_channel_free(ABI16_IOCTL_ARGS);
+int nouveau_abi16_ioctl_channel_killed(ABI16_IOCTL_ARGS);
 int nouveau_abi16_ioctl_grobj_alloc(ABI16_IOCTL_ARGS);
 int nouveau_abi16_ioctl_notifierobj_alloc(ABI16_IOCTL_ARGS);
 int nouveau_abi16_ioctl_gpuobj_free(ABI16_IOCTL_ARGS);
@@ -65,6 +66,11 @@ struct drm_nouveau_channel_free {
 	int channel;
 };
 
+struct drm_nouveau_channel_killed {
+	int channel;
+	int killed;
+};
+
 struct drm_nouveau_grobj_alloc {
 	int      channel;
 	uint32_t handle;
@@ -108,6 +114,7 @@ struct drm_nouveau_setparam {
 #define DRM_IOCTL_NOUVEAU_SETPARAM           DRM_IOWR(DRM_COMMAND_BASE + DRM_NOUVEAU_SETPARAM, struct drm_nouveau_setparam)
 #define DRM_IOCTL_NOUVEAU_CHANNEL_ALLOC      DRM_IOWR(DRM_COMMAND_BASE + DRM_NOUVEAU_CHANNEL_ALLOC, struct drm_nouveau_channel_alloc)
 #define DRM_IOCTL_NOUVEAU_CHANNEL_FREE       DRM_IOW (DRM_COMMAND_BASE + DRM_NOUVEAU_CHANNEL_FREE, struct drm_nouveau_channel_free)
+#define DRM_IOCTL_NOUVEAU_CHANNEL_KILLED     DRM_IOWR(DRM_COMMAND_BASE + DRM_NOUVEAU_CHANNEL_KILLED, struct drm_nouveau_channel_killed)
 #define DRM_IOCTL_NOUVEAU_GROBJ_ALLOC        DRM_IOW (DRM_COMMAND_BASE + DRM_NOUVEAU_GROBJ_ALLOC, struct drm_nouveau_grobj_alloc)
 #define DRM_IOCTL_NOUVEAU_NOTIFIEROBJ_ALLOC  DRM_IOWR(DRM_COMMAND_BASE + DRM_NOUVEAU_NOTIFIEROBJ_ALLOC, struct drm_nouveau_notifierobj_alloc)
 #define DRM_IOCTL_NOUVEAU_GPUOBJ_FREE        DRM_IOW (DRM_COMMAND_BASE + DRM_NOUVEAU_GPUOBJ_FREE, struct drm_nouveau_gpuobj_free)
