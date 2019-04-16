@@ -398,7 +398,7 @@ struct ttm_bo_driver {
  * @swap_lru: Lru list of buffer objects used for swapping.
  */
 
-extern struct ttm_bo_global {
+struct ttm_bo_global {
 
 	/**
 	 * Constant after init.
@@ -410,9 +410,8 @@ extern struct ttm_bo_global {
 	spinlock_t lru_lock;
 
 	/**
-	 * Protected by ttm_global_mutex.
+	 * Protected by device_list_mutex.
 	 */
-	unsigned int use_count;
 	struct list_head device_list;
 
 	/**
@@ -424,7 +423,7 @@ extern struct ttm_bo_global {
 	 * Internal protection.
 	 */
 	atomic_t bo_count;
-} ttm_bo_glob;
+};
 
 
 #define TTM_NUM_MEM_TYPES 8
@@ -569,8 +568,8 @@ void ttm_bo_mem_put(struct ttm_buffer_object *bo, struct ttm_mem_reg *mem);
 void ttm_bo_mem_put_locked(struct ttm_buffer_object *bo,
 			   struct ttm_mem_reg *mem);
 
-void ttm_bo_global_release(void);
-int ttm_bo_global_init(void);
+void ttm_bo_global_release(struct ttm_bo_global *glob);
+int ttm_bo_global_init(struct ttm_bo_global *glob);
 
 int ttm_bo_device_release(struct ttm_bo_device *bdev);
 
@@ -907,7 +906,7 @@ struct ttm_bo_global_ref {
  */
 static inline int ttm_bo_global_ref_init(struct drm_global_reference *ref)
 {
-	return ttm_bo_global_init();
+	return ttm_bo_global_init(ref->object);
 }
 
 /**
@@ -921,7 +920,7 @@ static inline int ttm_bo_global_ref_init(struct drm_global_reference *ref)
  */
 static inline void ttm_bo_global_ref_release(struct drm_global_reference *ref)
 {
-	ttm_bo_global_release();
+	ttm_bo_global_release(ref->object);
 }
 
 #endif

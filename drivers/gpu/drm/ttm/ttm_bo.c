@@ -49,9 +49,6 @@ static void ttm_bo_global_kobj_release(struct kobject *kobj);
  * ttm_global_mutex - protecting the global BO state
  */
 DEFINE_MUTEX(ttm_global_mutex);
-struct ttm_bo_global ttm_bo_glob = {
-	.use_count = 0
-};
 
 static struct attribute ttm_bo_count = {
 	.name = "bo_count",
@@ -1531,35 +1528,22 @@ static void ttm_bo_global_kobj_release(struct kobject *kobj)
 	kfree(glob);
 }
 
-void ttm_bo_global_release(void)
+void ttm_bo_global_release(struct ttm_bo_global *glob)
 {
-	struct ttm_bo_global *glob = &ttm_bo_glob;
-
-	mutex_lock(&ttm_global_mutex);
-	if (--glob->use_count > 0)
-		goto out;
-
 	kobject_del(&glob->kobj);
 	kobject_put(&glob->kobj);
 	ttm_mem_global_release(&ttm_mem_glob);
-out:
-	mutex_unlock(&ttm_global_mutex);
 }
 EXPORT_SYMBOL(ttm_bo_global_release);
 
-int ttm_bo_global_init(void)
+int ttm_bo_global_init(struct ttm_bo_global *glob)
 {
-	struct ttm_bo_global *glob = &ttm_bo_glob;
-	int ret = 0;
+	int ret;
 	unsigned i;
-
-	mutex_lock(&ttm_global_mutex);
-	if (++glob->use_count > 1)
-		goto out;
 
 	ret = ttm_mem_global_init(&ttm_mem_glob);
 	if (ret)
-		goto out;
+		return ret;
 
 	spin_lock_init(&glob->lru_lock);
 	glob->mem_glob = &ttm_mem_glob;
@@ -1568,7 +1552,7 @@ int ttm_bo_global_init(void)
 
 	if (unlikely(glob->dummy_read_page == NULL)) {
 		ret = -ENOMEM;
-		goto out;
+		goto out_no_drp;
 	}
 
 	for (i = 0; i < TTM_MAX_BO_PRIORITY; ++i)
@@ -1580,8 +1564,9 @@ int ttm_bo_global_init(void)
 		&glob->kobj, &ttm_bo_glob_kobj_type, ttm_get_kobj(), "buffer_objects");
 	if (unlikely(ret != 0))
 		kobject_put(&glob->kobj);
-out:
-	mutex_unlock(&ttm_global_mutex);
+	return ret;
+out_no_drp:
+	kfree(glob);
 	return ret;
 }
 EXPORT_SYMBOL(ttm_bo_global_init);
