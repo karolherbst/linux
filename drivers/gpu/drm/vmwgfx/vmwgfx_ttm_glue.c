@@ -78,3 +78,30 @@ void vmw_validation_mem_init_ttm(struct vmw_private *dev_priv, size_t gran)
 	vvm->unreserve_mem = vmw_vmt_unreserve;
 	vvm->gran = gran;
 }
+
+int vmw_ttm_global_init(struct vmw_private *dev_priv)
+{
+	struct drm_global_reference *global_ref;
+	int ret;
+
+	global_ref = &dev_priv->bo_global_ref.ref;
+	global_ref->global_type = DRM_GLOBAL_TTM_BO;
+	global_ref->size = sizeof(struct ttm_bo_global);
+	global_ref->init = &ttm_bo_global_ref_init;
+	global_ref->release = &ttm_bo_global_ref_release;
+	ret = drm_global_item_ref(global_ref);
+
+	if (unlikely(ret != 0)) {
+		DRM_ERROR("Failed setting up TTM buffer objects.\n");
+		goto out_no_bo;
+	}
+
+	return 0;
+out_no_bo:
+	return ret;
+}
+
+void vmw_ttm_global_release(struct vmw_private *dev_priv)
+{
+	drm_global_item_unref(&dev_priv->bo_global_ref.ref);
+}

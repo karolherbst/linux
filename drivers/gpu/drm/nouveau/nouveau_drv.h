@@ -146,6 +146,7 @@ struct nouveau_drm {
 
 	/* TTM interface support */
 	struct {
+		struct ttm_bo_global_ref bo_global_ref;
 		struct ttm_bo_device bdev;
 		atomic_t validate_sequence;
 		int (*move)(struct nouveau_channel *,
