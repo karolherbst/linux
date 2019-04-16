@@ -1528,6 +1528,7 @@ static void ttm_bo_global_kobj_release(struct kobject *kobj)
 		container_of(kobj, struct ttm_bo_global, kobj);
 
 	__free_page(glob->dummy_read_page);
+	kfree(glob);
 }
 
 void ttm_bo_global_release(void)
