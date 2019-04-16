@@ -570,7 +570,8 @@ void ttm_bo_mem_put_locked(struct ttm_buffer_object *bo,
 			   struct ttm_mem_reg *mem);
 
 void ttm_bo_global_release(struct ttm_bo_global *glob);
-int ttm_bo_global_init(struct ttm_bo_global *glob);
+int ttm_bo_global_init(struct ttm_bo_global *glob,
+		       struct ttm_mem_global *mem_glob);
 
 int ttm_bo_device_release(struct ttm_bo_device *bdev);
 
@@ -894,6 +895,7 @@ extern const struct ttm_mem_type_manager_func ttm_bo_manager_func;
 
 struct ttm_bo_global_ref {
 	struct drm_global_reference ref;
+	struct ttm_mem_global *mem_glob;
 };
 
 /**
@@ -907,7 +909,9 @@ struct ttm_bo_global_ref {
  */
 static inline int ttm_bo_global_ref_init(struct drm_global_reference *ref)
 {
-	return ttm_bo_global_init(ref->object);
+	struct ttm_bo_global_ref *bo_ref =
+		container_of(ref, struct ttm_bo_global_ref, ref);
+	return ttm_bo_global_init(ref->object, bo_ref->mem_glob);
 }
 
 /**
