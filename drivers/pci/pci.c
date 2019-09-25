@@ -860,6 +860,14 @@ static int pci_raw_set_power_state(struct pci_dev *dev, pci_power_t state)
 	   || (state == PCI_D2 && !dev->d2_support))
 		return -EIO;
 
+	/*
+	 * Power management can be disabled for certain devices as they don't
+	 * come back up later on runtime_resume. We rely on platform means to
+	 * cut power consumption instead (e.g. ACPI).
+	 */
+	if (state != PCI_D0 && dev->parent_d3cold)
+		return 0;
+
 	pci_read_config_word(dev, dev->pm_cap + PCI_PM_CTRL, &pmcsr);
 	if (pmcsr == (u16) ~0) {
 		pci_err(dev, "can't change power state from %s to %s (config space inaccessible)\n",
