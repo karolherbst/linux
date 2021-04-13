@@ -1,0 +1,46 @@
+variables:
+  FDO_UPSTREAM_REPO: drm/nouveau
+  MINIO_HOST: minio-packet.freedesktop.org
+  CI_PRE_CLONE_SCRIPT: |-
+          set -o xtrace
+          /usr/bin/wget -q -O- ${CI_PROJECT_URL}/-/raw/nouveau_gitlab_main/ci/download-git-cache.sh | sh -
+          set +o xtrace
+
+include:
+  - project: 'freedesktop/ci-templates'
+    file:
+      - '/templates/ci-fairy.yml'
+
+stages:
+  - git-archive
+
+
+# Generic rule to not run the job during scheduled pipelines
+# ----------------------------------------------------------
+.scheduled_pipelines-rules:
+  rules: &ignore_scheduled_pipelines
+    if: &is-scheduled-pipeline '$CI_PIPELINE_SOURCE == "schedule"'
+    when: never
+
+
+make git archive:
+  extends:
+    - .fdo.ci-fairy
+  stage: git-archive
+  rules:
+    - if: *is-scheduled-pipeline
+      when: on_success
+  # ensure we are running on packet
+  tags:
+    - packet.net
+  script:
+    # make sure we have an unshallow repository
+    - $(git rev-parse --is-shallow-repository) && git fetch --unshallow
+    # Compactify the .git directory
+    - git gc --aggressive
+    # compress the current folder
+    - tar -cvzf ../$CI_PROJECT_NAME.tar.gz .
+
+    # login with the JWT token
+    - ci-fairy minio login $CI_JOB_JWT
+    - ci-fairy minio cp ../$CI_PROJECT_NAME.tar.gz minio://$MINIO_HOST/git-cache/$CI_PROJECT_NAMESPACE/$CI_PROJECT_NAME/$CI_PROJECT_NAME.tar.gz
