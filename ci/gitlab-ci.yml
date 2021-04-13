@@ -37,7 +37,7 @@ make git archive:
     # make sure we have an unshallow repository
     - $(git rev-parse --is-shallow-repository) && git fetch --unshallow
     # Compactify the .git directory
-    - git gc --aggressive
+    - git gc
     # compress the current folder
     - tar -cvzf ../$CI_PROJECT_NAME.tar.gz .
 
