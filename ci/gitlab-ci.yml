@@ -36,6 +36,10 @@ make git archive:
   script:
     # make sure we have an unshallow repository
     - $(git rev-parse --is-shallow-repository) && git fetch --unshallow
+    # fetch remote repos we want to sync with
+    - git remote add mainline https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git
+    - git remote add stable https://git.kernel.org/pub/scm/linux/kernel/git/stable/linux.git
+    - git fetch --all
     # Compactify the .git directory
     - git gc
     # compress the current folder
