@@ -898,6 +898,14 @@ mgag200_simple_display_pipe_enable(struct drm_simple_display_pipe *pipe,
 		.y2 = fb->height,
 	};
 
+	/*
+	 * Concurrent operations could possibly trigger a call to
+	 * drm_connector_helper_funcs.get_modes by trying to read the
+	 * display modes. Protect access to I/O registers by acquiring
+	 * the I/O-register lock.
+	 */
+	mutex_lock(&mdev->rmmio_lock);
+
 	if (mdev->type == G200_WB || mdev->type == G200_EW3)
 		mgag200_g200wb_hold_bmc(mdev);
 
@@ -929,6 +937,8 @@ mgag200_simple_display_pipe_enable(struct drm_simple_display_pipe *pipe,
 	/* Always scanout image at VRAM offset 0 */
 	mgag200_set_startadd(mdev, (u32)0);
 	mgag200_set_offset(mdev, fb);
+
+	mutex_unlock(&mdev->rmmio_lock);
 }
 
 static void
@@ -998,6 +1008,8 @@ mgag200_simple_display_pipe_update(struct drm_simple_display_pipe *pipe,
 	if (!fb)
 		return;
 
+	mutex_lock(&mdev->rmmio_lock);
+
 	if (crtc->state->color_mgmt_changed && crtc->state->gamma_lut)
 		mgag200_crtc_set_gamma(mdev, fb->format, crtc->state->gamma_lut->data);
 
@@ -1008,6 +1020,8 @@ mgag200_simple_display_pipe_update(struct drm_simple_display_pipe *pipe,
 	/* Always scanout image at VRAM offset 0 */
 	mgag200_set_startadd(mdev, (u32)0);
 	mgag200_set_offset(mdev, fb);
+
+	mutex_unlock(&mdev->rmmio_lock);
 }
 
 static struct drm_crtc_state *

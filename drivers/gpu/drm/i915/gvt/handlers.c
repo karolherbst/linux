@@ -42,6 +42,7 @@
 #include "i915_pvinfo.h"
 #include "intel_mchbar_regs.h"
 #include "display/intel_display_types.h"
+#include "display/intel_dmc_regs.h"
 #include "display/intel_fbc.h"
 #include "display/vlv_dsi_pll_regs.h"
 #include "gt/intel_gt_regs.h"
@@ -71,7 +72,7 @@ unsigned long intel_gvt_get_device_type(struct intel_gvt *gvt)
 	return 0;
 }
 
-bool intel_gvt_match_device(struct intel_gvt *gvt,
+static bool intel_gvt_match_device(struct intel_gvt *gvt,
 		unsigned long device)
 {
 	return intel_gvt_get_device_type(gvt) & device;
@@ -561,14 +562,19 @@ static u32 bxt_vgpu_get_dp_bitrate(struct intel_vgpu *vgpu, enum port port)
 	}
 
 	clock.m1 = 2;
-	clock.m2 = (vgpu_vreg_t(vgpu, BXT_PORT_PLL(phy, ch, 0)) & PORT_PLL_M2_MASK) << 22;
+	clock.m2 = REG_FIELD_GET(PORT_PLL_M2_INT_MASK,
+				 vgpu_vreg_t(vgpu, BXT_PORT_PLL(phy, ch, 0))) << 22;
 	if (vgpu_vreg_t(vgpu, BXT_PORT_PLL(phy, ch, 3)) & PORT_PLL_M2_FRAC_ENABLE)
-		clock.m2 |= vgpu_vreg_t(vgpu, BXT_PORT_PLL(phy, ch, 2)) & PORT_PLL_M2_FRAC_MASK;
-	clock.n = (vgpu_vreg_t(vgpu, BXT_PORT_PLL(phy, ch, 1)) & PORT_PLL_N_MASK) >> PORT_PLL_N_SHIFT;
-	clock.p1 = (vgpu_vreg_t(vgpu, BXT_PORT_PLL_EBB_0(phy, ch)) & PORT_PLL_P1_MASK) >> PORT_PLL_P1_SHIFT;
-	clock.p2 = (vgpu_vreg_t(vgpu, BXT_PORT_PLL_EBB_0(phy, ch)) & PORT_PLL_P2_MASK) >> PORT_PLL_P2_SHIFT;
+		clock.m2 |= REG_FIELD_GET(PORT_PLL_M2_FRAC_MASK,
+					  vgpu_vreg_t(vgpu, BXT_PORT_PLL(phy, ch, 2)));
+	clock.n = REG_FIELD_GET(PORT_PLL_N_MASK,
+				vgpu_vreg_t(vgpu, BXT_PORT_PLL(phy, ch, 1)));
+	clock.p1 = REG_FIELD_GET(PORT_PLL_P1_MASK,
+				 vgpu_vreg_t(vgpu, BXT_PORT_PLL_EBB_0(phy, ch)));
+	clock.p2 = REG_FIELD_GET(PORT_PLL_P2_MASK,
+				 vgpu_vreg_t(vgpu, BXT_PORT_PLL_EBB_0(phy, ch)));
 	clock.m = clock.m1 * clock.m2;
-	clock.p = clock.p1 * clock.p2;
+	clock.p = clock.p1 * clock.p2 * 5;
 
 	if (clock.n == 0 || clock.p == 0) {
 		gvt_dbg_dpy("vgpu-%d PORT_%c PLL has invalid divider\n", vgpu->id, port_name(port));
@@ -578,7 +584,7 @@ static u32 bxt_vgpu_get_dp_bitrate(struct intel_vgpu *vgpu, enum port port)
 	clock.vco = DIV_ROUND_CLOSEST_ULL(mul_u32_u32(refclk, clock.m), clock.n << 22);
 	clock.dot = DIV_ROUND_CLOSEST(clock.vco, clock.p);
 
-	dp_br = clock.dot / 5;
+	dp_br = clock.dot;
 
 out:
 	return dp_br;
@@ -2916,7 +2922,7 @@ static int init_mmio_block_handlers(struct intel_gvt *gvt)
 	block = find_mmio_block(gvt, VGT_PVINFO_PAGE);
 	if (!block) {
 		WARN(1, "fail to assign handlers to mmio block %x\n",
-		     i915_mmio_reg_offset(block->offset));
+		     i915_mmio_reg_offset(gvt->mmio.mmio_block->offset));
 		return -ENODEV;
 	}
 
