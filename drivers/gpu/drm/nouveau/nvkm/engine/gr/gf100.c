@@ -1245,7 +1245,7 @@ gf100_gr_trap_gpc_rop(struct gf100_gr *gr, int gpc)
 
 	nvkm_snprintbf(error, sizeof(error), gf100_gpc_rop_error, trap[0]);
 
-	nvkm_error(subdev, "GPC%d/PROP trap: %08x [%s] x = %u, y = %u, "
+	nvkm_error_ratelimited(subdev, "GPC%d/PROP trap: %08x [%s] x = %u, y = %u, "
 			   "format = %x, storage type = %x\n",
 		   gpc, trap[0], error, trap[1] & 0xffff, trap[1] >> 16,
 		   (trap[2] >> 8) & 0x3f, trap[3] & 0xff);
@@ -1304,7 +1304,7 @@ gf100_gr_trap_mp(struct gf100_gr *gr, int gpc, int tpc)
 	nvkm_snprintbf(glob, sizeof(glob), gf100_mp_global_error, gerr);
 	warp = nvkm_enum_find(gf100_mp_warp_error, werr & 0xffff);
 
-	nvkm_error(subdev, "GPC%i/TPC%i/MP trap: "
+	nvkm_error_ratelimited(subdev, "GPC%i/TPC%i/MP trap: "
 			   "global %08x [%s] warp %04x [%s]\n",
 		   gpc, tpc, gerr, glob, werr, warp ? warp->name : "");
 
@@ -1321,7 +1321,7 @@ gf100_gr_trap_tpc(struct gf100_gr *gr, int gpc, int tpc)
 
 	if (stat & 0x00000001) {
 		u32 trap = nvkm_rd32(device, TPC_UNIT(gpc, tpc, 0x0224));
-		nvkm_error(subdev, "GPC%d/TPC%d/TEX: %08x\n", gpc, tpc, trap);
+		nvkm_error_ratelimited(subdev, "GPC%d/TPC%d/TEX: %08x\n", gpc, tpc, trap);
 		nvkm_wr32(device, TPC_UNIT(gpc, tpc, 0x0224), 0xc0000000);
 		stat &= ~0x00000001;
 	}
@@ -1333,27 +1333,27 @@ gf100_gr_trap_tpc(struct gf100_gr *gr, int gpc, int tpc)
 
 	if (stat & 0x00000004) {
 		u32 trap = nvkm_rd32(device, TPC_UNIT(gpc, tpc, 0x0084));
-		nvkm_error(subdev, "GPC%d/TPC%d/POLY: %08x\n", gpc, tpc, trap);
+		nvkm_error_ratelimited(subdev, "GPC%d/TPC%d/POLY: %08x\n", gpc, tpc, trap);
 		nvkm_wr32(device, TPC_UNIT(gpc, tpc, 0x0084), 0xc0000000);
 		stat &= ~0x00000004;
 	}
 
 	if (stat & 0x00000008) {
 		u32 trap = nvkm_rd32(device, TPC_UNIT(gpc, tpc, 0x048c));
-		nvkm_error(subdev, "GPC%d/TPC%d/L1C: %08x\n", gpc, tpc, trap);
+		nvkm_error_ratelimited(subdev, "GPC%d/TPC%d/L1C: %08x\n", gpc, tpc, trap);
 		nvkm_wr32(device, TPC_UNIT(gpc, tpc, 0x048c), 0xc0000000);
 		stat &= ~0x00000008;
 	}
 
 	if (stat & 0x00000010) {
 		u32 trap = nvkm_rd32(device, TPC_UNIT(gpc, tpc, 0x0430));
-		nvkm_error(subdev, "GPC%d/TPC%d/MPC: %08x\n", gpc, tpc, trap);
+		nvkm_error_ratelimited(subdev, "GPC%d/TPC%d/MPC: %08x\n", gpc, tpc, trap);
 		nvkm_wr32(device, TPC_UNIT(gpc, tpc, 0x0430), 0xc0000000);
 		stat &= ~0x00000010;
 	}
 
 	if (stat) {
-		nvkm_error(subdev, "GPC%d/TPC%d/%08x: unknown\n", gpc, tpc, stat);
+		nvkm_error_ratelimited(subdev, "GPC%d/TPC%d/%08x: unknown\n", gpc, tpc, stat);
 	}
 }
 
@@ -1372,21 +1372,21 @@ gf100_gr_trap_gpc(struct gf100_gr *gr, int gpc)
 
 	if (stat & 0x00000002) {
 		u32 trap = nvkm_rd32(device, GPC_UNIT(gpc, 0x0900));
-		nvkm_error(subdev, "GPC%d/ZCULL: %08x\n", gpc, trap);
+		nvkm_error_ratelimited(subdev, "GPC%d/ZCULL: %08x\n", gpc, trap);
 		nvkm_wr32(device, GPC_UNIT(gpc, 0x0900), 0xc0000000);
 		stat &= ~0x00000002;
 	}
 
 	if (stat & 0x00000004) {
 		u32 trap = nvkm_rd32(device, GPC_UNIT(gpc, 0x1028));
-		nvkm_error(subdev, "GPC%d/CCACHE: %08x\n", gpc, trap);
+		nvkm_error_ratelimited(subdev, "GPC%d/CCACHE: %08x\n", gpc, trap);
 		nvkm_wr32(device, GPC_UNIT(gpc, 0x1028), 0xc0000000);
 		stat &= ~0x00000004;
 	}
 
 	if (stat & 0x00000008) {
 		u32 trap = nvkm_rd32(device, GPC_UNIT(gpc, 0x0824));
-		nvkm_error(subdev, "GPC%d/ESETUP: %08x\n", gpc, trap);
+		nvkm_error_ratelimited(subdev, "GPC%d/ESETUP: %08x\n", gpc, trap);
 		nvkm_wr32(device, GPC_UNIT(gpc, 0x0824), 0xc0000000);
 		stat &= ~0x00000009;
 	}
@@ -1401,7 +1401,7 @@ gf100_gr_trap_gpc(struct gf100_gr *gr, int gpc)
 	}
 
 	if (stat) {
-		nvkm_error(subdev, "GPC%d/%08x: unknown\n", gpc, stat);
+		nvkm_error_ratelimited(subdev, "GPC%d/%08x: unknown\n", gpc, stat);
 	}
 }
 
@@ -1419,7 +1419,7 @@ gf100_gr_trap_intr(struct gf100_gr *gr)
 
 		nvkm_snprintbf(error, sizeof(error), gf100_dispatch_error,
 			       stat & 0x3fffffff);
-		nvkm_error(subdev, "DISPATCH %08x [%s]\n", stat, error);
+		nvkm_error_ratelimited(subdev, "DISPATCH %08x [%s]\n", stat, error);
 		nvkm_wr32(device, 0x404000, 0xc0000000);
 		nvkm_wr32(device, 0x400108, 0x00000001);
 		trap &= ~0x00000001;
@@ -1430,7 +1430,7 @@ gf100_gr_trap_intr(struct gf100_gr *gr)
 
 		nvkm_snprintbf(error, sizeof(error), gf100_m2mf_error,
 			       stat & 0x3fffffff);
-		nvkm_error(subdev, "M2MF %08x [%s]\n", stat, error);
+		nvkm_error_ratelimited(subdev, "M2MF %08x [%s]\n", stat, error);
 
 		nvkm_wr32(device, 0x404600, 0xc0000000);
 		nvkm_wr32(device, 0x400108, 0x00000002);
@@ -1442,7 +1442,7 @@ gf100_gr_trap_intr(struct gf100_gr *gr)
 
 		nvkm_snprintbf(error, sizeof(error), gf100_ccache_error,
 			       stat & 0x3fffffff);
-		nvkm_error(subdev, "CCACHE %08x [%s]\n", stat, error);
+		nvkm_error_ratelimited(subdev, "CCACHE %08x [%s]\n", stat, error);
 		nvkm_wr32(device, 0x408030, 0xc0000000);
 		nvkm_wr32(device, 0x400108, 0x00000008);
 		trap &= ~0x00000008;
@@ -1450,7 +1450,7 @@ gf100_gr_trap_intr(struct gf100_gr *gr)
 
 	if (trap & 0x00000010) {
 		u32 stat = nvkm_rd32(device, 0x405840);
-		nvkm_error(subdev, "SHADER %08x, sph: 0x%06x, stage: 0x%02x\n",
+		nvkm_error_ratelimited(subdev, "SHADER %08x, sph: 0x%06x, stage: 0x%02x\n",
 			   stat, stat & 0xffffff, (stat >> 24) & 0x3f);
 		nvkm_wr32(device, 0x405840, 0xc0000000);
 		nvkm_wr32(device, 0x400108, 0x00000010);
@@ -1462,7 +1462,7 @@ gf100_gr_trap_intr(struct gf100_gr *gr)
 
 		nvkm_snprintbf(error, sizeof(error), gf100_unk6_error,
 			       stat & 0x3fffffff);
-		nvkm_error(subdev, "UNK6 %08x [%s]\n", stat, error);
+		nvkm_error_ratelimited(subdev, "UNK6 %08x [%s]\n", stat, error);
 
 		nvkm_wr32(device, 0x40601c, 0xc0000000);
 		nvkm_wr32(device, 0x400108, 0x00000040);
@@ -1476,7 +1476,7 @@ gf100_gr_trap_intr(struct gf100_gr *gr)
 
 		nvkm_snprintbf(error, sizeof(error), gf100_macro_error,
 			       stat & 0x1fffffff);
-		nvkm_error(subdev, "MACRO %08x [%s], pc: 0x%03x%s, op: 0x%08x\n",
+		nvkm_error_ratelimited(subdev, "MACRO %08x [%s], pc: 0x%03x%s, op: 0x%08x\n",
 			   stat, error, pc & 0x7ff,
 			   (pc & 0x10000000) ? "" : " (invalid)",
 			   op);
@@ -1490,7 +1490,7 @@ gf100_gr_trap_intr(struct gf100_gr *gr)
 		u32 stat = nvkm_rd32(device, 0x407020) & 0x3fffffff;
 
 		nvkm_snprintbf(error, sizeof(error), gk104_sked_error, stat);
-		nvkm_error(subdev, "SKED: %08x [%s]\n", stat, error);
+		nvkm_error_ratelimited(subdev, "SKED: %08x [%s]\n", stat, error);
 
 		if (stat)
 			nvkm_wr32(device, 0x407020, 0x40000000);
@@ -1516,7 +1516,7 @@ gf100_gr_trap_intr(struct gf100_gr *gr)
 		for (rop = 0; rop < gr->rop_nr; rop++) {
 			u32 statz = nvkm_rd32(device, ROP_UNIT(rop, 0x070));
 			u32 statc = nvkm_rd32(device, ROP_UNIT(rop, 0x144));
-			nvkm_error(subdev, "ROP%d %08x %08x\n",
+			nvkm_error_ratelimited(subdev, "ROP%d %08x %08x\n",
 				 rop, statz, statc);
 			nvkm_wr32(device, ROP_UNIT(rop, 0x070), 0xc0000000);
 			nvkm_wr32(device, ROP_UNIT(rop, 0x144), 0xc0000000);
@@ -1526,7 +1526,7 @@ gf100_gr_trap_intr(struct gf100_gr *gr)
 	}
 
 	if (trap) {
-		nvkm_error(subdev, "TRAP UNHANDLED %08x\n", trap);
+		nvkm_error_ratelimited(subdev, "TRAP UNHANDLED %08x\n", trap);
 		nvkm_wr32(device, 0x400108, trap);
 	}
 }
@@ -1536,14 +1536,14 @@ gf100_gr_ctxctl_debug_unit(struct gf100_gr *gr, u32 base)
 {
 	struct nvkm_subdev *subdev = &gr->base.engine.subdev;
 	struct nvkm_device *device = subdev->device;
-	nvkm_error(subdev, "%06x - done %08x\n", base,
+	nvkm_error_ratelimited(subdev, "%06x - done %08x\n", base,
 		   nvkm_rd32(device, base + 0x400));
-	nvkm_error(subdev, "%06x - stat %08x %08x %08x %08x\n", base,
+	nvkm_error_ratelimited(subdev, "%06x - stat %08x %08x %08x %08x\n", base,
 		   nvkm_rd32(device, base + 0x800),
 		   nvkm_rd32(device, base + 0x804),
 		   nvkm_rd32(device, base + 0x808),
 		   nvkm_rd32(device, base + 0x80c));
-	nvkm_error(subdev, "%06x - stat %08x %08x %08x %08x\n", base,
+	nvkm_error_ratelimited(subdev, "%06x - stat %08x %08x %08x %08x\n", base,
 		   nvkm_rd32(device, base + 0x810),
 		   nvkm_rd32(device, base + 0x814),
 		   nvkm_rd32(device, base + 0x818),
@@ -1578,25 +1578,25 @@ gf100_gr_ctxctl_isr(struct gf100_gr *gr)
 			u32  mthd = (addr & 0x00003ffc);
 			u32  data = nvkm_rd32(device, 0x409810);
 
-			nvkm_error(subdev, "FECS MTHD subc %d class %04x "
+			nvkm_error_ratelimited(subdev, "FECS MTHD subc %d class %04x "
 					   "mthd %04x data %08x\n",
 				   subc, class, mthd, data);
 		} else {
-			nvkm_error(subdev, "FECS ucode error %d\n", code);
+			nvkm_error_ratelimited(subdev, "FECS ucode error %d\n", code);
 		}
 		nvkm_wr32(device, 0x409c20, 0x00000001);
 		stat &= ~0x00000001;
 	}
 
 	if (!gr->firmware && (stat & 0x00080000)) {
-		nvkm_error(subdev, "FECS watchdog timeout\n");
+		nvkm_error_ratelimited(subdev, "FECS watchdog timeout\n");
 		gf100_gr_ctxctl_debug(gr);
 		nvkm_wr32(device, 0x409c20, 0x00080000);
 		stat &= ~0x00080000;
 	}
 
 	if (stat) {
-		nvkm_error(subdev, "FECS %08x\n", stat);
+		nvkm_error_ratelimited(subdev, "FECS %08x\n", stat);
 		gf100_gr_ctxctl_debug(gr);
 		nvkm_wr32(device, 0x409c20, stat);
 	}
@@ -1672,8 +1672,8 @@ gf100_gr_intr(struct nvkm_inth *inth)
 	}
 
 	if (stat & 0x00200000) {
-		nvkm_error(subdev, "TRAP ch %d [%010llx %s]\n",
-			   chid, inst << 12, name);
+		nvkm_error_ratelimited(subdev, "TRAP ch %d [%010llx %s]\n",
+			               chid, inst << 12, name);
 		gf100_gr_trap_intr(gr);
 		nvkm_wr32(device, 0x400100, 0x00200000);
 		stat &= ~0x00200000;
@@ -1686,7 +1686,7 @@ gf100_gr_intr(struct nvkm_inth *inth)
 	}
 
 	if (stat) {
-		nvkm_error(subdev, "intr %08x\n", stat);
+		nvkm_error_ratelimited(subdev, "intr %08x\n", stat);
 		nvkm_wr32(device, 0x400100, stat);
 	}
 
