@@ -764,6 +764,7 @@ nvkm_dp_func = {
 	.acquire = nvkm_dp_acquire,
 	.release = nvkm_dp_release,
 	.disable = nvkm_dp_disable,
+	.detect = nvkm_outp_detect,
 };
 
 int

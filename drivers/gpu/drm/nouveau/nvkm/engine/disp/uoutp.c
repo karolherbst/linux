@@ -21,6 +21,7 @@
  */
 #define nvkm_uoutp(p) container_of((p), struct nvkm_outp, object)
 #include "outp.h"
+#include "conn.h"
 #include "dp.h"
 #include "head.h"
 #include "ior.h"
@@ -276,6 +277,29 @@ nvkm_uoutp_mthd_load_detect(struct nvkm_outp *outp, void *argv, u32 argc)
 }
 
 static int
+nvkm_uoutp_mthd_detect(struct nvkm_outp *outp, void *argv, u32 argc)
+{
+	union nvif_outp_detect_args *args = argv;
+	int ret;
+
+	if (argc != sizeof(args->v0) || args->v0.version != 0)
+		return -ENOSYS;
+	if (!outp->func->detect)
+		return -EINVAL;
+
+	ret = outp->func->detect(outp);
+	switch (ret) {
+	case 0: args->v0.status = NVIF_OUTP_DETECT_V0_NOT_PRESENT; break;
+	case 1: args->v0.status = NVIF_OUTP_DETECT_V0_PRESENT; break;
+	default:
+		args->v0.status = NVIF_OUTP_DETECT_V0_UNKNOWN;
+		break;
+	}
+
+	return 0;
+}
+
+static int
 nvkm_uoutp_mthd_acquired(struct nvkm_outp *outp, u32 mthd, void *argv, u32 argc)
 {
 	switch (mthd) {
@@ -295,8 +319,9 @@ static int
 nvkm_uoutp_mthd_noacquire(struct nvkm_outp *outp, u32 mthd, void *argv, u32 argc)
 {
 	switch (mthd) {
-	case NVIF_OUTP_V0_LOAD_DETECT: return nvkm_uoutp_mthd_load_detect(outp, argv, argc);
+	case NVIF_OUTP_V0_DETECT     : return nvkm_uoutp_mthd_detect     (outp, argv, argc);
 	case NVIF_OUTP_V0_ACQUIRE    : return nvkm_uoutp_mthd_acquire    (outp, argv, argc);
+	case NVIF_OUTP_V0_LOAD_DETECT: return nvkm_uoutp_mthd_load_detect(outp, argv, argc);
 	case NVIF_OUTP_V0_DP_AUX_PWR : return nvkm_uoutp_mthd_dp_aux_pwr (outp, argv, argc);
 	default:
 		break;

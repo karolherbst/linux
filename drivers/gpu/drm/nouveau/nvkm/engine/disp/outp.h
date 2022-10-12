@@ -84,6 +84,8 @@ int nvkm_outp_acquire(struct nvkm_outp *, u8 user, bool hda);
 void nvkm_outp_release(struct nvkm_outp *, u8 user);
 void nvkm_outp_route(struct nvkm_disp *);
 
+int nvkm_outp_detect(struct nvkm_outp *);
+
 struct nvkm_outp_func {
 	void *(*dtor)(struct nvkm_outp *);
 	void (*init)(struct nvkm_outp *);
@@ -91,6 +93,8 @@ struct nvkm_outp_func {
 	int (*acquire)(struct nvkm_outp *);
 	void (*release)(struct nvkm_outp *);
 	void (*disable)(struct nvkm_outp *, struct nvkm_ior *);
+
+	int (*detect)(struct nvkm_outp *);
 };
 
 #define OUTP_MSG(o,l,f,a...) do {                                              \

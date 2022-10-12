@@ -40,14 +40,28 @@ union nvif_outp_args {
 	} v0;
 };
 
-#define NVIF_OUTP_V0_LOAD_DETECT 0x00
-#define NVIF_OUTP_V0_ACQUIRE     0x01
-#define NVIF_OUTP_V0_RELEASE     0x02
-#define NVIF_OUTP_V0_INFOFRAME   0x03
-#define NVIF_OUTP_V0_HDA_ELD     0x04
-#define NVIF_OUTP_V0_DP_AUX_PWR  0x05
-#define NVIF_OUTP_V0_DP_RETRAIN  0x06
-#define NVIF_OUTP_V0_DP_MST_VCPI 0x07
+#define NVIF_OUTP_V0_DETECT          0x00
+#define NVIF_OUTP_V0_ACQUIRE         0x02
+#define NVIF_OUTP_V0_RELEASE         0x03
+
+#define NVIF_OUTP_V0_LOAD_DETECT     0x10
+
+#define NVIF_OUTP_V0_INFOFRAME       0x40
+#define NVIF_OUTP_V0_HDA_ELD         0x41
+
+#define NVIF_OUTP_V0_DP_AUX_PWR      0x50
+#define NVIF_OUTP_V0_DP_RETRAIN      0x52
+#define NVIF_OUTP_V0_DP_MST_VCPI     0x56
+
+union nvif_outp_detect_args {
+	struct nvif_outp_detect_v0 {
+		__u8 version;
+#define NVIF_OUTP_DETECT_V0_NOT_PRESENT 0x00
+#define NVIF_OUTP_DETECT_V0_PRESENT     0x01
+#define NVIF_OUTP_DETECT_V0_UNKNOWN     0x02
+		__u8 status;
+	} v0;
+};
 
 union nvif_outp_load_detect_args {
 	struct nvif_outp_load_detect_v0 {
