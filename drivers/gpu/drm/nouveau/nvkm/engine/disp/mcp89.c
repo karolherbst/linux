@@ -47,6 +47,7 @@ mcp89_sor = {
 	.hdmi = &gt215_sor_hdmi,
 	.dp = &mcp89_sor_dp,
 	.hda = &gt215_sor_hda,
+	.bl = &gt215_sor_bl,
 };
 
 static int

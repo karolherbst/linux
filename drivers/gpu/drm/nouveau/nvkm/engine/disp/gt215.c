@@ -31,6 +31,43 @@
 
 #include <nvif/class.h>
 
+static int
+gt215_sor_bl_set(struct nvkm_ior *ior, int lvl)
+{
+	struct nvkm_device *device = ior->disp->engine.subdev.device;
+	const u32 soff = nv50_ior_base(ior);
+	u32 div, val;
+
+	div = nvkm_rd32(device, 0x61c080 + soff);
+	val = (lvl * div) / 100;
+	if (div)
+		nvkm_wr32(device, 0x61c084 + soff, 0xc0000000 | val);
+
+	return 0;
+}
+
+static int
+gt215_sor_bl_get(struct nvkm_ior *ior)
+{
+	struct nvkm_device *device = ior->disp->engine.subdev.device;
+	const u32 soff = nv50_ior_base(ior);
+	u32 div, val;
+
+	div  = nvkm_rd32(device, 0x61c080 + soff);
+	val  = nvkm_rd32(device, 0x61c084 + soff);
+	val &= 0x00ffffff;
+	if (div && div >= val)
+		return ((val * 100) + (div / 2)) / div;
+
+	return 100;
+}
+
+const struct nvkm_ior_func_bl
+gt215_sor_bl = {
+	.get = gt215_sor_bl_get,
+	.set = gt215_sor_bl_set,
+};
+
 static void
 gt215_sor_hda_eld(struct nvkm_ior *ior, int head, u8 *data, u8 size)
 {
@@ -190,6 +227,7 @@ gt215_sor = {
 	.hdmi = &gt215_sor_hdmi,
 	.dp = &gt215_sor_dp,
 	.hda = &gt215_sor_hda,
+	.bl = &gt215_sor_bl,
 };
 
 static int

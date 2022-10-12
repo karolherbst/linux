@@ -168,6 +168,37 @@ nv50_sor_clock(struct nvkm_ior *sor)
 	nvkm_mask(device, 0x614300 + soff, 0x00000707, (div << 8) | div);
 }
 
+static int
+nv50_sor_bl_set(struct nvkm_ior *ior, int lvl)
+{
+	struct nvkm_device *device = ior->disp->engine.subdev.device;
+	const u32 soff = nv50_ior_base(ior);
+	u32 div = 1025;
+	u32 val = (lvl * div) / 100;
+
+	nvkm_wr32(device, 0x61c084 + soff, 0x80000000 | val);
+	return 0;
+}
+
+static int
+nv50_sor_bl_get(struct nvkm_ior *ior)
+{
+	struct nvkm_device *device = ior->disp->engine.subdev.device;
+	const u32 soff = nv50_ior_base(ior);
+	u32 div = 1025;
+	u32 val;
+
+	val  = nvkm_rd32(device, 0x61c084 + soff);
+	val &= 0x000007ff;
+	return ((val * 100) + (div / 2)) / div;
+}
+
+const struct nvkm_ior_func_bl
+nv50_sor_bl = {
+	.get = nv50_sor_bl_get,
+	.set = nv50_sor_bl_set,
+};
+
 static void
 nv50_sor_power_wait(struct nvkm_device *device, u32 soff)
 {
@@ -222,6 +253,7 @@ nv50_sor = {
 	.state = nv50_sor_state,
 	.power = nv50_sor_power,
 	.clock = nv50_sor_clock,
+	.bl = &nv50_sor_bl,
 };
 
 static int

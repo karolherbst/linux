@@ -40,6 +40,7 @@ gp100_sor = {
 	.hdmi = &gm200_sor_hdmi,
 	.dp = &gm200_sor_dp,
 	.hda = &gf119_sor_hda,
+	.bl = &gt215_sor_bl,
 };
 
 int

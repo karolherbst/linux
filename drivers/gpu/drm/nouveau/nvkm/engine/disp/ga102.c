@@ -108,6 +108,7 @@ ga102_sor = {
 	.hdmi = &gv100_sor_hdmi,
 	.dp = &ga102_sor_dp,
 	.hda = &gv100_sor_hda,
+	.bl = &gt215_sor_bl,
 };
 
 static int

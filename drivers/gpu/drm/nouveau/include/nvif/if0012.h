@@ -48,6 +48,8 @@ union nvif_outp_args {
 
 #define NVIF_OUTP_V0_INFOFRAME       0x40
 #define NVIF_OUTP_V0_HDA_ELD         0x41
+#define NVIF_OUTP_V0_BL_GET          0x42
+#define NVIF_OUTP_V0_BL_SET          0x43
 
 #define NVIF_OUTP_V0_DP_AUX_PWR      0x50
 #define NVIF_OUTP_V0_DP_RETRAIN      0x52
@@ -136,6 +138,20 @@ union nvif_outp_hda_eld_args {
 		__u8  head;
 		__u8  pad02[6];
 		__u8  data[];
+	} v0;
+};
+
+union nvif_outp_bl_get_args {
+	struct nvif_outp_bl_get_v0 {
+		__u8  version;
+		__u8  level;
+	} v0;
+};
+
+union nvif_outp_bl_set_args {
+	struct nvif_outp_bl_set_v0 {
+		__u8  version;
+		__u8  level;
 	} v0;
 };
 

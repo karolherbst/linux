@@ -125,6 +125,7 @@ g84_sor = {
 	.power = nv50_sor_power,
 	.clock = nv50_sor_clock,
 	.hdmi = &g84_sor_hdmi,
+	.bl = &nv50_sor_bl,
 };
 
 int

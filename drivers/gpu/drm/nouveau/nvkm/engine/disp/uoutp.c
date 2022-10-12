@@ -29,6 +29,55 @@
 #include <nvif/if0012.h>
 
 static int
+nvkm_uoutp_mthd_bl_set(struct nvkm_outp *outp, void *argv, u32 argc)
+{
+	union nvif_outp_bl_get_args *args = argv;
+	int ret;
+
+	if (argc != sizeof(args->v0) || args->v0.version != 0)
+		return -ENOSYS;
+
+	ret = nvkm_outp_acquire(outp, NVKM_OUTP_PRIV, false);
+	if (ret)
+		return ret;
+
+	if (outp->ior->func->bl)
+		ret = outp->ior->func->bl->set(outp->ior, args->v0.level);
+	else
+		ret = -EINVAL;
+
+	nvkm_outp_release(outp, NVKM_OUTP_PRIV);
+	return ret;
+}
+
+static int
+nvkm_uoutp_mthd_bl_get(struct nvkm_outp *outp, void *argv, u32 argc)
+{
+	union nvif_outp_bl_get_args *args = argv;
+	int ret;
+
+	if (argc != sizeof(args->v0) || args->v0.version != 0)
+		return -ENOSYS;
+
+	ret = nvkm_outp_acquire(outp, NVKM_OUTP_PRIV, false);
+	if (ret)
+		return ret;
+
+	if (outp->ior->func->bl) {
+		ret = outp->ior->func->bl->get(outp->ior);
+		if (ret >= 0) {
+			args->v0.level = ret;
+			ret = 0;
+		}
+	} else {
+		ret = -EINVAL;
+	}
+
+	nvkm_outp_release(outp, NVKM_OUTP_PRIV);
+	return ret;
+}
+
+static int
 nvkm_uoutp_mthd_dp_mst_vcpi(struct nvkm_outp *outp, void *argv, u32 argc)
 {
 	struct nvkm_ior *ior = outp->ior;
@@ -322,6 +371,8 @@ nvkm_uoutp_mthd_noacquire(struct nvkm_outp *outp, u32 mthd, void *argv, u32 argc
 	case NVIF_OUTP_V0_DETECT     : return nvkm_uoutp_mthd_detect     (outp, argv, argc);
 	case NVIF_OUTP_V0_ACQUIRE    : return nvkm_uoutp_mthd_acquire    (outp, argv, argc);
 	case NVIF_OUTP_V0_LOAD_DETECT: return nvkm_uoutp_mthd_load_detect(outp, argv, argc);
+	case NVIF_OUTP_V0_BL_GET     : return nvkm_uoutp_mthd_bl_get     (outp, argv, argc);
+	case NVIF_OUTP_V0_BL_SET     : return nvkm_uoutp_mthd_bl_set     (outp, argv, argc);
 	case NVIF_OUTP_V0_DP_AUX_PWR : return nvkm_uoutp_mthd_dp_aux_pwr (outp, argv, argc);
 	default:
 		break;

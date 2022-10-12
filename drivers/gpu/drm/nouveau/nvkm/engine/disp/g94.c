@@ -296,6 +296,7 @@ g94_sor = {
 	.war_2 = g94_sor_war_2,
 	.war_3 = g94_sor_war_3,
 	.dp = &g94_sor_dp,
+	.bl = &nv50_sor_bl,
 };
 
 static int

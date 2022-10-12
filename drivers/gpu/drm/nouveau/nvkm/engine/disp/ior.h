@@ -91,6 +91,11 @@ struct nvkm_ior_func {
 		void (*eld)(struct nvkm_ior *, int head, u8 *data, u8 size);
 		void (*device_entry)(struct nvkm_ior *, int head);
 	} *hda;
+
+	const struct nvkm_ior_func_bl {
+		int (*get)(struct nvkm_ior *);
+		int (*set)(struct nvkm_ior *, int lvl);
+	} *bl;
 };
 
 int nvkm_ior_new_(const struct nvkm_ior_func *func, struct nvkm_disp *,
@@ -122,6 +127,7 @@ int nv50_sor_cnt(struct nvkm_disp *, unsigned long *);
 void nv50_sor_state(struct nvkm_ior *, struct nvkm_ior_state *);
 void nv50_sor_power(struct nvkm_ior *, bool, bool, bool, bool, bool);
 void nv50_sor_clock(struct nvkm_ior *);
+extern const struct nvkm_ior_func_bl nv50_sor_bl;
 
 int g84_sor_new(struct nvkm_disp *, int);
 extern const struct nvkm_ior_func_hdmi g84_sor_hdmi;
@@ -141,6 +147,7 @@ void g94_sor_dp_watermark(struct nvkm_ior *, int, u8);
 extern const struct nvkm_ior_func_hdmi gt215_sor_hdmi;
 void gt215_sor_dp_audio(struct nvkm_ior *, int, bool);
 extern const struct nvkm_ior_func_hda gt215_sor_hda;
+extern const struct nvkm_ior_func_bl gt215_sor_bl;
 
 int gf119_sor_cnt(struct nvkm_disp *, unsigned long *);
 void gf119_sor_state(struct nvkm_ior *, struct nvkm_ior_state *);

@@ -80,4 +80,6 @@ int nvif_outp_dp_aux_pwr(struct nvif_outp *, bool enable);
 int nvif_outp_dp_retrain(struct nvif_outp *);
 int nvif_outp_dp_mst_vcpi(struct nvif_outp *, int head,
 			  u8 start_slot, u8 num_slots, u16 pbn, u16 aligned_pbn);
+int nvif_outp_bl_get(struct nvif_outp *);
+int nvif_outp_bl_set(struct nvif_outp *, int level);
 #endif

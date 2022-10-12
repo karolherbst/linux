@@ -379,6 +379,7 @@ gf119_dac = {
 	.power = nv50_dac_power,
 	.sense = nv50_dac_sense,
 	.clock = gf119_dac_clock,
+	.bl = &gt215_sor_bl,
 };
 
 int
