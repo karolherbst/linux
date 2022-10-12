@@ -1974,6 +1974,56 @@ nv50_disp_atomic_commit_tail(struct drm_atomic_state *state)
 	if (atom->lock_core)
 		mutex_lock(&disp->mutex);
 
+	{
+		static bool done = false;
+
+		if (!done) {
+			drm_for_each_plane(plane, dev) {
+				struct nv50_wndw *wndw = nv50_wndw(plane);
+
+				if (wndw->func->image_clr) {
+					wndw->func->sema_clr(wndw);
+					wndw->func->ntfy_clr(wndw);
+					wndw->func->xlut_clr(wndw);
+					wndw->func->csc_clr(wndw);
+					wndw->func->image_clr(wndw);
+					interlock[wndw->interlock.type] |= wndw->interlock.data;
+				}
+			}
+
+			drm_for_each_crtc(crtc, dev) {
+				struct nv50_head *head = nv50_head(crtc);
+
+				head->func->curs_clr(head);
+				head->func->olut_clr(head);
+			}
+
+			for (int sor = 0; sor < 4; sor++) {
+				struct nv50_head_atom asyh = {};
+
+				core->func->sor->ctrl(core, sor, 0, &asyh);
+			}
+
+			interlock[NV50_DISP_INTERLOCK_CORE] |= 1;
+
+			drm_for_each_plane(plane, dev) {
+				struct nv50_wndw *wndw = nv50_wndw(plane);
+
+				if (wndw->func->image_clr)
+					wndw->func->update(wndw, interlock);
+			}
+
+			core->func->ntfy_init(disp->sync, NV50_DISP_CORE_NTFY);
+			core->func->update(core, interlock, true);
+			if (core->func->ntfy_wait_done(disp->sync, NV50_DISP_CORE_NTFY,
+						       disp->core->chan.base.device))
+				NV_ERROR(drm, "core notifier timeout\n");
+
+			memset(interlock, 0x00, sizeof(interlock));
+			done = true;
+		}
+	}
+
 	/* Disable head(s). */
 	for_each_oldnew_crtc_in_state(state, crtc, old_crtc_state, new_crtc_state, i) {
 		struct nv50_head_atom *asyh = nv50_head_atom(new_crtc_state);
