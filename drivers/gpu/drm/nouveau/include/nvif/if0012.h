@@ -54,6 +54,8 @@ union nvif_outp_args {
 #define NVIF_OUTP_V0_DP_AUX_PWR      0x50
 #define NVIF_OUTP_V0_DP_AUX_XFER     0x51
 #define NVIF_OUTP_V0_DP_RETRAIN      0x52
+#define NVIF_OUTP_V0_DP_MST_ID_GET   0x54
+#define NVIF_OUTP_V0_DP_MST_ID_PUT   0x55
 #define NVIF_OUTP_V0_DP_MST_VCPI     0x56
 
 union nvif_outp_detect_args {
@@ -178,6 +180,22 @@ union nvif_outp_dp_aux_xfer_args {
 union nvif_outp_dp_retrain_args {
 	struct nvif_outp_dp_retrain_vn {
 	} vn;
+};
+
+union nvif_outp_dp_mst_id_put_args {
+	struct nvif_outp_dp_mst_id_put_v0 {
+		__u8  version;
+		__u8  pad01[3];
+		__u32 id;
+	} v0;
+};
+
+union nvif_outp_dp_mst_id_get_args {
+	struct nvif_outp_dp_mst_id_get_v0 {
+		__u8  version;
+		__u8  pad01[3];
+		__u32 id;
+	} v0;
 };
 
 union nvif_outp_dp_mst_vcpi_args {
