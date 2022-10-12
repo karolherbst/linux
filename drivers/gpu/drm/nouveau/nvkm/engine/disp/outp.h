@@ -2,6 +2,7 @@
 #ifndef __NVKM_DISP_OUTP_H__
 #define __NVKM_DISP_OUTP_H__
 #include "priv.h"
+#include "ior.h"
 
 #include <subdev/bios.h>
 #include <subdev/bios/dcb.h>
@@ -11,6 +12,9 @@ struct nvkm_outp {
 	const struct nvkm_outp_func *func;
 	struct nvkm_disp *disp;
 	int index;
+	enum nvkm_ior_type type;
+	enum nvkm_ior_proto proto;
+
 	struct dcb_output info;
 
 	struct nvkm_i2c_bus *i2c;
@@ -68,8 +72,10 @@ struct nvkm_outp {
 };
 
 int nvkm_outp_new_(const struct nvkm_outp_func *, struct nvkm_disp *, int index,
-		   struct dcb_output *, struct nvkm_outp **);
-int nvkm_outp_new(struct nvkm_disp *, int index, struct dcb_output *, struct nvkm_outp **);
+		   enum nvkm_ior_type, enum nvkm_ior_proto, struct dcb_output *,
+		   struct nvkm_outp **);
+int nvkm_outp_new(struct nvkm_disp *, int index, enum nvkm_ior_type, enum nvkm_ior_proto,
+		  struct dcb_output *, struct nvkm_outp **);
 void nvkm_outp_del(struct nvkm_outp **);
 void nvkm_outp_init(struct nvkm_outp *);
 void nvkm_outp_fini(struct nvkm_outp *);

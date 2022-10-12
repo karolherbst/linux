@@ -3,8 +3,8 @@
 #define __NVKM_DISP_DP_H__
 #include "outp.h"
 
-int nvkm_dp_new(struct nvkm_disp *, int index, struct dcb_output *,
-		struct nvkm_outp **);
+int nvkm_dp_new(struct nvkm_disp *, int index, enum nvkm_ior_type, enum nvkm_ior_proto,
+		struct dcb_output *, struct nvkm_outp **);
 void nvkm_dp_disable(struct nvkm_outp *, struct nvkm_ior *);
 void nvkm_dp_enable(struct nvkm_outp *, bool auxpwr);
 

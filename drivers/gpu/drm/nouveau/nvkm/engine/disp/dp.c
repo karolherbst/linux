@@ -767,7 +767,8 @@ nvkm_dp_func = {
 };
 
 int
-nvkm_dp_new(struct nvkm_disp *disp, int index, struct dcb_output *dcbE, struct nvkm_outp **poutp)
+nvkm_dp_new(struct nvkm_disp *disp, int index, enum nvkm_ior_type type, enum nvkm_ior_proto proto,
+	    struct dcb_output *dcbE, struct nvkm_outp **poutp)
 {
 	struct nvkm_device *device = disp->engine.subdev.device;
 	struct nvkm_bios *bios = device->bios;
@@ -777,7 +778,7 @@ nvkm_dp_new(struct nvkm_disp *disp, int index, struct dcb_output *dcbE, struct n
 	u32 data;
 	int ret;
 
-	ret = nvkm_outp_new_(&nvkm_dp_func, disp, index, dcbE, poutp);
+	ret = nvkm_outp_new_(&nvkm_dp_func, disp, index, type, proto, dcbE, poutp);
 	outp = *poutp;
 	if (ret)
 		return ret;

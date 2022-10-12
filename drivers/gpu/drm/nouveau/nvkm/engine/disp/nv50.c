@@ -1572,6 +1572,8 @@ nv50_disp_oneinit(struct nvkm_disp *disp)
 	u8  ver, hdr;
 	u32 data;
 	struct dcb_output dcbE;
+	enum nvkm_ior_type type = -1;
+	enum nvkm_ior_proto proto;
 	struct nvbios_connE connE;
 
 	if (func->wndw.cnt) {
@@ -1635,25 +1637,42 @@ nv50_disp_oneinit(struct nvkm_disp *disp)
 			break;
 		outp = NULL;
 
-		switch (dcbE.type) {
-		case DCB_OUTPUT_ANALOG:
-		case DCB_OUTPUT_TV:
-		case DCB_OUTPUT_TMDS:
-		case DCB_OUTPUT_LVDS:
-			ret = nvkm_outp_new(disp, i, &dcbE, &outp);
+
+		switch (dcbE.location) {
+		case 0:
+			switch (dcbE.type) {
+			case DCB_OUTPUT_ANALOG: type = DAC; proto =  CRT; break;
+			case DCB_OUTPUT_TV    : type = DAC; proto =   TV; break;
+			case DCB_OUTPUT_TMDS  : type = SOR; proto = TMDS; break;
+			case DCB_OUTPUT_LVDS  : type = SOR; proto = LVDS; break;
+			case DCB_OUTPUT_DP    : type = SOR; proto =   DP; break;
+			case DCB_OUTPUT_WFD   : continue; /* No support for WFD yet. */
+			default:
+				break;
+			}
 			break;
-		case DCB_OUTPUT_DP:
-			ret = nvkm_dp_new(disp, i, &dcbE, &outp);
+		case 1:
+			switch (dcbE.type) {
+			case DCB_OUTPUT_TMDS: type = PIOR; proto = TMDS; break;
+			case DCB_OUTPUT_DP  : type = PIOR; proto = TMDS; /* not a bug */ break;
+			default:
+				break;
+			}
 			break;
-		case DCB_OUTPUT_WFD:
-			/* No support for WFD yet. */
-			ret = -ENODEV;
-			continue;
 		default:
-			nvkm_warn(subdev, "dcb %d type %d unknown\n",
-				  i, dcbE.type);
+			break;
+		}
+
+		if (type < 0) {
+			nvkm_warn(subdev, "dcb %d loc %d type %d unknown\n",
+				  i, dcbE.location, dcbE.type);
 			continue;
 		}
+
+		if (proto != DP)
+			ret = nvkm_outp_new(disp, i, type, proto, &dcbE, &outp);
+		else
+			ret = nvkm_dp_new(disp, i, type, proto, &dcbE, &outp);
 
 		if (ret) {
 			if (outp) {

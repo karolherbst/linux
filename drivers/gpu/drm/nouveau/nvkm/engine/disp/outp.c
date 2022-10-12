@@ -56,36 +56,6 @@ nvkm_outp_route(struct nvkm_disp *disp)
 	}
 }
 
-static enum nvkm_ior_proto
-nvkm_outp_xlat(struct nvkm_outp *outp, enum nvkm_ior_type *type)
-{
-	switch (outp->info.location) {
-	case 0:
-		switch (outp->info.type) {
-		case DCB_OUTPUT_ANALOG: *type = DAC; return  CRT;
-		case DCB_OUTPUT_TV    : *type = DAC; return   TV;
-		case DCB_OUTPUT_TMDS  : *type = SOR; return TMDS;
-		case DCB_OUTPUT_LVDS  : *type = SOR; return LVDS;
-		case DCB_OUTPUT_DP    : *type = SOR; return   DP;
-		default:
-			break;
-		}
-		break;
-	case 1:
-		switch (outp->info.type) {
-		case DCB_OUTPUT_TMDS: *type = PIOR; return TMDS;
-		case DCB_OUTPUT_DP  : *type = PIOR; return TMDS; /* not a bug */
-		default:
-			break;
-		}
-		break;
-	default:
-		break;
-	}
-	WARN_ON(1);
-	return UNKNOWN;
-}
-
 void
 nvkm_outp_release(struct nvkm_outp *outp, u8 user)
 {
@@ -143,19 +113,13 @@ int
 nvkm_outp_acquire(struct nvkm_outp *outp, u8 user, bool hda)
 {
 	struct nvkm_ior *ior = outp->ior;
-	enum nvkm_ior_proto proto;
-	enum nvkm_ior_type type;
+	enum nvkm_ior_type type = outp->type;
 
 	OUTP_TRACE(outp, "acquire %02x |= %02x %p", outp->acquired, user, ior);
 	if (ior) {
 		outp->acquired |= user;
 		return 0;
 	}
-
-	/* Lookup a compatible, and unused, OR to assign to the device. */
-	proto = nvkm_outp_xlat(outp, &type);
-	if (proto == UNKNOWN)
-		return -ENOSYS;
 
 	/* Deal with panels requiring identity-mapped SOR assignment. */
 	if (outp->identity) {
@@ -218,16 +182,12 @@ static void
 nvkm_outp_init_route(struct nvkm_outp *outp)
 {
 	struct nvkm_disp *disp = outp->disp;
-	enum nvkm_ior_proto proto;
-	enum nvkm_ior_type type;
+	enum nvkm_ior_proto proto = outp->proto;
+	enum nvkm_ior_type type = outp->type;
 	struct nvkm_ior *ior;
 	int id, link;
 
 	/* Find any OR from the class that is able to support this device. */
-	proto = nvkm_outp_xlat(outp, &type);
-	if (proto == UNKNOWN)
-		return;
-
 	ior = nvkm_ior_find(disp, type, -1);
 	if (!ior) {
 		WARN_ON(1);
@@ -295,12 +255,11 @@ nvkm_outp_del(struct nvkm_outp **poutp)
 
 int
 nvkm_outp_new_(const struct nvkm_outp_func *func, struct nvkm_disp *disp,
-	       int index, struct dcb_output *dcbE, struct nvkm_outp **poutp)
+	       int index, enum nvkm_ior_type type, enum nvkm_ior_proto proto,
+	       struct dcb_output *dcbE, struct nvkm_outp **poutp)
 {
 	struct nvkm_i2c *i2c = disp->engine.subdev.device->i2c;
 	struct nvkm_outp *outp;
-	enum nvkm_ior_proto proto;
-	enum nvkm_ior_type type;
 
 	if (!(outp = *poutp = kzalloc(sizeof(*outp), GFP_KERNEL)))
 		return -ENOMEM;
@@ -308,6 +267,8 @@ nvkm_outp_new_(const struct nvkm_outp_func *func, struct nvkm_disp *disp,
 	outp->func = func;
 	outp->disp = disp;
 	outp->index = index;
+	outp->type = type;
+	outp->proto = proto;
 	outp->info = *dcbE;
 	outp->i2c = nvkm_i2c_bus_find(i2c, dcbE->i2c_index);
 
@@ -317,12 +278,6 @@ nvkm_outp_new_(const struct nvkm_outp_func *func, struct nvkm_disp *disp,
 		 outp->info.type >= 2 ? outp->info.sorconf.link : 0,
 		 outp->info.connector, outp->info.i2c_index,
 		 outp->info.bus, outp->info.heads);
-
-	/* Cull output paths we can't map to an output resource. */
-	proto = nvkm_outp_xlat(outp, &type);
-	if (proto == UNKNOWN)
-		return -ENODEV;
-
 	return 0;
 }
 
@@ -331,8 +286,8 @@ nvkm_outp = {
 };
 
 int
-nvkm_outp_new(struct nvkm_disp *disp, int index, struct dcb_output *dcbE,
-	      struct nvkm_outp **poutp)
+nvkm_outp_new(struct nvkm_disp *disp, int index, enum nvkm_ior_type type, enum nvkm_ior_proto proto,
+	      struct dcb_output *dcbE, struct nvkm_outp **poutp)
 {
-	return nvkm_outp_new_(&nvkm_outp, disp, index, dcbE, poutp);
+	return nvkm_outp_new_(&nvkm_outp, disp, index, type, proto, dcbE, poutp);
 }
