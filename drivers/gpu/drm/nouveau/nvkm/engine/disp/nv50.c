@@ -1288,10 +1288,6 @@ nv50_disp_super_2_2(struct nvkm_disp *disp, struct nvkm_head *head)
 		ior->asy.link      = outp->lvds.dual ? 3 : 1;
 	}
 
-	/* Handle any link training, etc. */
-	if (outp && outp->func->acquire)
-		outp->func->acquire(outp);
-
 	/* Execute OnInt2 IED script. */
 	nv50_disp_super_ied_on(head, ior, 0, khz);
 

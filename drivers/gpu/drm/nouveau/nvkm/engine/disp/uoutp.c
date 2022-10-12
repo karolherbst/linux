@@ -247,10 +247,19 @@ nvkm_uoutp_mthd_acquire_dp(struct nvkm_outp *outp, u8 dpcd[16],
 	if (ret)
 		return ret;
 
+	nvkm_outp_route(outp->disp);
+
 	memcpy(outp->dp.dpcd, dpcd, sizeof(outp->dp.dpcd));
 	outp->dp.lt.nr = link_nr;
 	outp->dp.lt.bw = link_bw;
 	outp->dp.lt.mst = mst;
+
+	ret = outp->func->acquire(outp);
+	if (ret) {
+		nvkm_outp_release(outp, NVKM_OUTP_USER);
+		return ret;
+	}
+
 	return 0;
 }
 
