@@ -22,7 +22,10 @@
  * Authors: Ben Skeggs
  */
 #include "priv.h"
+#include "conn.h"
 #include "head.h"
+#include <subdev/bios.h>
+#include <subdev/bios/disp.h>
 
 #include <nvif/class.h>
 
@@ -103,8 +106,30 @@ nv04_disp_intr(struct nvkm_disp *disp)
 	}
 }
 
+static int
+nv04_disp_oneinit(struct nvkm_disp *disp)
+{
+	struct nvkm_bios *bios = disp->engine.subdev.device->bios;
+	struct nvkm_conn *conn;
+	struct nvbios_connE connE;
+	int ret, i;
+	u8 ver, hdr;
+	u32 data;
+
+	/* Create connectors for each DCB connector entry. */
+	i = -1;
+	while ((data = nvbios_connEp(bios, ++i, &ver, &hdr, &connE))) {
+		ret = nvkm_conn_new(disp, i, &connE, &conn);
+		if (WARN_ON(ret))
+			return ret;
+	}
+
+	return 0;
+}
+
 static const struct nvkm_disp_func
 nv04_disp = {
+	.oneinit = nv04_disp_oneinit,
 	.intr = nv04_disp_intr,
 	.root = { 0, 0, NV04_DISP },
 	.user = { {} },
