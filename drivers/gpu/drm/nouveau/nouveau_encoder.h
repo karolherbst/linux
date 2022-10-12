@@ -50,7 +50,6 @@ struct nouveau_encoder {
 	int or;
 
 	struct i2c_adapter *i2c;
-	struct nvkm_i2c_aux *aux;
 
 	/* different to drm_encoder.crtc, this reflects what's
 	 * actually programmed on the hw, not the proposed crtc */

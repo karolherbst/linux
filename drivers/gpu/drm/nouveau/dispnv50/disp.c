@@ -1642,13 +1642,13 @@ nv50_sor_destroy(struct drm_encoder *encoder)
 {
 	struct nouveau_encoder *nv_encoder = nouveau_encoder(encoder);
 
-	nvif_outp_dtor(&nv_encoder->outp);
-
 	nv50_mstm_del(&nv_encoder->dp.mstm);
 	drm_encoder_cleanup(encoder);
 
 	if (nv_encoder->outp.info.proto == NVIF_OUTP_DP)
 		mutex_destroy(&nv_encoder->dp.hpd_irq_lock);
+
+	nvif_outp_dtor(&nv_encoder->outp);
 
 	kfree(encoder);
 }
@@ -1701,16 +1701,18 @@ nv50_sor_create(struct drm_connector *connector, struct nouveau_encoder *nv_enco
 	if (nv_encoder->outp.info.proto == NVIF_OUTP_DP) {
 		mutex_init(&nv_encoder->dp.hpd_irq_lock);
 
-		nv_encoder->aux = nvkm_i2c_aux_find(i2c, nv_encoder->outp.info.dp.aux);
-		if (!nv_encoder->aux)
-			return -EINVAL;
-
 		if (disp->disp->object.oclass < GF110_DISP) {
 			/* HW has no support for address-only
 			 * transactions, so we're required to
 			 * use custom I2C-over-AUX code.
 			 */
-			nv_encoder->i2c = &nv_encoder->aux->i2c;
+			struct nvkm_i2c_aux *aux;
+
+			aux = nvkm_i2c_aux_find(i2c, nv_encoder->outp.info.dp.aux);
+			if (!aux)
+				return -EINVAL;
+
+			nv_encoder->i2c = &aux->i2c;
 		} else {
 			nv_encoder->i2c = &nv_connector->aux.ddc;
 		}
@@ -1854,7 +1856,6 @@ nv50_pior_create(struct drm_connector *connector, struct nouveau_encoder *outp)
 	}
 
 	outp->i2c = ddc;
-	outp->aux = aux;
 
 	encoder = to_drm_encoder(outp);
 	encoder->possible_crtcs = outp->outp.info.heads;
