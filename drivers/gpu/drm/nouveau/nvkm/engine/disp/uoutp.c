@@ -370,6 +370,45 @@ nvkm_uoutp_new(const struct nvkm_oclass *oclass, void *argv, u32 argc, struct nv
 	ret = -EBUSY;
 	spin_lock(&disp->client.lock);
 	if (!outp->object.func) {
+		switch (outp->type) {
+		case DAC: args->v0.type = NVIF_OUTP_V0_DAC; break;
+		case SOR: args->v0.type = NVIF_OUTP_V0_SOR; break;
+		case PIOR: args->v0.type = NVIF_OUTP_V0_PIOR; break;
+		default:
+			   WARN_ON(1);
+			   return -EINVAL; // lock!
+		}
+
+		switch (outp->proto) {
+		case CRT:
+			args->v0.proto = NVIF_OUTP_V0_RGB_CRT;
+			args->v0.rgb_crt.freq_max = outp->info.crtconf.maxfreq;
+			break;
+		case TMDS:
+			args->v0.proto = NVIF_OUTP_V0_TMDS;
+			args->v0.tmds.dual = outp->info.sorconf.link == 3;
+			break;
+		case LVDS:
+			args->v0.proto = NVIF_OUTP_V0_LVDS;
+			args->v0.lvds.dual = 0; //XXX
+			args->v0.lvds.bpc8 = 0; //XXX
+			break;
+		case DP:
+			args->v0.proto = NVIF_OUTP_V0_DP;
+			args->v0.dp.aux = outp->info.i2c_index;
+			args->v0.dp.link_nr = outp->info.dpconf.link_nr;
+			args->v0.dp.link_bw = outp->info.dpconf.link_bw;
+			args->v0.dp.mst = outp->dp.mst;
+			break;
+		default:
+			WARN_ON(1);
+			return -EINVAL;
+		}
+
+		args->v0.heads = outp->info.heads;
+		args->v0.ddc = outp->info.i2c_index;
+		args->v0.conn = outp->info.connector;
+
 		nvkm_object_ctor(&nvkm_uoutp, oclass, &outp->object);
 		*pobject = &outp->object;
 		ret = 0;

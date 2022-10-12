@@ -7,6 +7,47 @@ struct nvif_disp;
 
 struct nvif_outp {
 	struct nvif_object object;
+	u32 id;
+
+	struct {
+		enum {
+			NVIF_OUTP_DAC,
+			NVIF_OUTP_SOR,
+			NVIF_OUTP_PIOR,
+		} type;
+
+		enum {
+			NVIF_OUTP_RGB_CRT,
+			NVIF_OUTP_TV,
+			NVIF_OUTP_TMDS,
+			NVIF_OUTP_LVDS,
+			NVIF_OUTP_DP,
+		} proto;
+
+		u8 heads;
+#define NVIF_OUTP_DDC_INVALID 0xff
+		u8 ddc;
+		u8 conn;
+
+		union {
+			struct {
+				u32 freq_max;
+			} rgb_crt;
+			struct {
+				u8  dual;
+			} tmds;
+			struct {
+				u32 dual;
+				u8  bpc8;
+			} lvds;
+			struct {
+				u8  aux;
+				u8  link_nr;
+				u32 link_bw;
+				bool mst;
+			} dp;
+		};
+	} info;
 
 	struct {
 		int id;

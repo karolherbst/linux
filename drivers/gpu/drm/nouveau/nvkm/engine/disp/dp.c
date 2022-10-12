@@ -774,7 +774,7 @@ nvkm_dp_new(struct nvkm_disp *disp, int index, enum nvkm_ior_type type, enum nvk
 	struct nvkm_bios *bios = device->bios;
 	struct nvkm_i2c *i2c = device->i2c;
 	struct nvkm_outp *outp;
-	u8  hdr, cnt, len;
+	u8  ver, hdr, cnt, len;
 	u32 data;
 	int ret;
 
@@ -801,6 +801,9 @@ nvkm_dp_new(struct nvkm_disp *disp, int index, enum nvkm_ior_type type, enum nvk
 	}
 
 	OUTP_DBG(outp, "bios dp %02x %02x %02x %02x", outp->dp.version, hdr, cnt, len);
+
+	data = nvbios_dp_table(bios, &ver, &hdr, &cnt, &len);
+	outp->dp.mst = data && ver >= 0x40 && (nvbios_rd08(bios, data + 0x08) & 0x04);
 
 	mutex_init(&outp->dp.mutex);
 	atomic_set(&outp->dp.lt.done, 0);

@@ -180,13 +180,13 @@ nouveau_dp_detect(struct nouveau_connector *nv_connector,
 		 nv_encoder->dp.link_nr, nv_encoder->dp.link_bw,
 		 dpcd[DP_DPCD_REV]);
 	NV_DEBUG(drm, "encoder: %dx%d\n",
-		 nv_encoder->dcb->dpconf.link_nr,
-		 nv_encoder->dcb->dpconf.link_bw);
+		 nv_encoder->outp.info.dp.link_nr,
+		 nv_encoder->outp.info.dp.link_bw);
 
-	if (nv_encoder->dcb->dpconf.link_nr < nv_encoder->dp.link_nr)
-		nv_encoder->dp.link_nr = nv_encoder->dcb->dpconf.link_nr;
-	if (nv_encoder->dcb->dpconf.link_bw < nv_encoder->dp.link_bw)
-		nv_encoder->dp.link_bw = nv_encoder->dcb->dpconf.link_bw;
+	if (nv_encoder->outp.info.dp.link_nr < nv_encoder->dp.link_nr)
+		nv_encoder->dp.link_nr = nv_encoder->outp.info.dp.link_nr;
+	if (nv_encoder->outp.info.dp.link_bw < nv_encoder->dp.link_bw)
+		nv_encoder->dp.link_bw = nv_encoder->outp.info.dp.link_bw;
 
 	NV_DEBUG(drm, "maximum: %dx%d\n",
 		 nv_encoder->dp.link_nr, nv_encoder->dp.link_bw);
@@ -214,7 +214,7 @@ out:
 bool
 nouveau_dp_link_check(struct nouveau_connector *nv_connector)
 {
-	struct nouveau_encoder *nv_encoder = find_encoder(&nv_connector->base, DCB_OUTPUT_DP);
+	struct nouveau_encoder *nv_encoder = find_encoder(&nv_connector->base, NVIF_OUTP_DP);
 
 	if (!nv_encoder || nv_encoder->outp.or.id < 0)
 		return true;
@@ -228,7 +228,7 @@ nouveau_dp_irq(struct work_struct *work)
 	struct nouveau_connector *nv_connector =
 		container_of(work, typeof(*nv_connector), irq_work);
 	struct drm_connector *connector = &nv_connector->base;
-	struct nouveau_encoder *outp = find_encoder(connector, DCB_OUTPUT_DP);
+	struct nouveau_encoder *outp = find_encoder(connector, NVIF_OUTP_DP);
 	struct nouveau_drm *drm = nouveau_drm(outp->base.base.dev);
 	struct nv50_mstm *mstm;
 	u64 hpd = 0;

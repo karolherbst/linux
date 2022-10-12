@@ -38,6 +38,7 @@ struct nvkm_outp {
 		struct {
 			struct nvbios_dpout info;
 			u8 version;
+			bool mst;
 
 			struct nvkm_i2c_aux *aux;
 

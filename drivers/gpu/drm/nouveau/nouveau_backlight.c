@@ -367,9 +367,9 @@ nouveau_backlight_init(struct drm_connector *connector)
 	}
 
 	if (connector->connector_type == DRM_MODE_CONNECTOR_LVDS)
-		nv_encoder = find_encoder(connector, DCB_OUTPUT_LVDS);
+		nv_encoder = find_encoder(connector, NVIF_OUTP_LVDS);
 	else if (connector->connector_type == DRM_MODE_CONNECTOR_eDP)
-		nv_encoder = find_encoder(connector, DCB_OUTPUT_DP);
+		nv_encoder = find_encoder(connector, NVIF_OUTP_DP);
 	else
 		return 0;
 

@@ -427,21 +427,22 @@ static enum nv50_crc_source_type
 nv50_crc_source_type(struct nouveau_encoder *outp,
 		     enum nv50_crc_source source)
 {
-	struct dcb_output *dcbe = outp->dcb;
-
 	switch (source) {
 	case NV50_CRC_SOURCE_NONE: return NV50_CRC_SOURCE_TYPE_NONE;
 	case NV50_CRC_SOURCE_RG:   return NV50_CRC_SOURCE_TYPE_RG;
 	default:		   break;
 	}
 
-	if (dcbe->location != DCB_LOC_ON_CHIP)
-		return NV50_CRC_SOURCE_TYPE_PIOR;
-
-	switch (dcbe->type) {
-	case DCB_OUTPUT_DP:	return NV50_CRC_SOURCE_TYPE_SF;
-	case DCB_OUTPUT_ANALOG:	return NV50_CRC_SOURCE_TYPE_DAC;
-	default:		return NV50_CRC_SOURCE_TYPE_SOR;
+	switch (outp->outp.info.type) {
+	case NVIF_OUTP_PIOR: return NV50_CRC_SOURCE_TYPE_PIOR;
+	case NVIF_OUTP_DAC : return NV50_CRC_SOURCE_TYPE_DAC;
+	case NVIF_OUTP_SOR :
+		if (outp->outp.info.proto == NVIF_OUTP_DP)
+			return NV50_CRC_SOURCE_TYPE_SF;
+		return NV50_CRC_SOURCE_TYPE_SOR;
+	default:
+		WARN_ON(1);
+		return NV50_CRC_SOURCE_TYPE_NONE;
 	}
 }
 

@@ -6,7 +6,37 @@ union nvif_outp_args {
 	struct nvif_outp_v0 {
 		__u8 version;
 		__u8 id;	/* DCB device index. */
-		__u8 pad02[6];
+#define NVIF_OUTP_V0_DAC  0x00
+#define NVIF_OUTP_V0_SOR  0x01
+#define NVIF_OUTP_V0_PIOR 0x02
+		__u8 type;
+#define NVIF_OUTP_V0_RGB_CRT 0x00
+#define NVIF_OUTP_V0_TMDS    0x01
+#define NVIF_OUTP_V0_LVDS    0x02
+#define NVIF_OUTP_V0_DP      0x03
+		__u8 proto;
+		__u8 heads;
+		__u8 ddc;
+		__u8 conn;
+		__u8 pad07;
+		union {
+			struct {
+				u32 freq_max;
+			} rgb_crt;
+			struct {
+				u8  dual;
+			} tmds;
+			struct {
+				u32 dual;
+				u8  bpc8;
+			} lvds;
+			struct {
+				u8  aux;
+				u8  link_nr;
+				u8  link_bw;
+				u8  mst;
+			} dp;
+		};
 	} v0;
 };
 

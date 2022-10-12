@@ -520,34 +520,27 @@ nv50_dac_func = {
 };
 
 static int
-nv50_dac_create(struct drm_connector *connector, struct dcb_output *dcbe)
+nv50_dac_create(struct drm_connector *connector, struct nouveau_encoder *outp)
 {
 	struct nouveau_drm *drm = nouveau_drm(connector->dev);
-	struct nv50_disp *disp = nv50_disp(connector->dev);
 	struct nvkm_i2c *i2c = nvxx_i2c(&drm->client.device);
 	struct nvkm_i2c_bus *bus;
-	struct nouveau_encoder *nv_encoder;
 	struct drm_encoder *encoder;
 	int type = DRM_MODE_ENCODER_DAC;
 
-	nv_encoder = kzalloc(sizeof(*nv_encoder), GFP_KERNEL);
-	if (!nv_encoder)
-		return -ENOMEM;
-	nv_encoder->dcb = dcbe;
-
-	bus = nvkm_i2c_bus_find(i2c, dcbe->i2c_index);
+	bus = nvkm_i2c_bus_find(i2c, outp->outp.info.ddc);
 	if (bus)
-		nv_encoder->i2c = &bus->i2c;
+		outp->i2c = &bus->i2c;
 
-	encoder = to_drm_encoder(nv_encoder);
-	encoder->possible_crtcs = dcbe->heads;
+	encoder = to_drm_encoder(outp);
+	encoder->possible_crtcs = outp->outp.info.heads;
 	encoder->possible_clones = 0;
 	drm_encoder_init(connector->dev, encoder, &nv50_dac_func, type,
-			 "dac-%04x-%04x", dcbe->hasht, dcbe->hashm);
+			 "dac-%d-%d", outp->outp.id, outp->outp.info.proto);
 	drm_encoder_helper_add(encoder, &nv50_dac_help);
 
 	drm_connector_attach_encoder(connector, encoder);
-	return nvif_outp_ctor(disp->disp, nv_encoder->base.base.name, dcbe->id, &nv_encoder->outp);
+	return 0;
 }
 
 /*
@@ -1074,7 +1067,7 @@ nv50_mstc_atomic_best_encoder(struct drm_connector *connector,
 	struct nv50_mstc *mstc = nv50_mstc(connector);
 	struct drm_crtc *crtc = connector_state->crtc;
 
-	if (!(mstc->mstm->outp->dcb->heads & drm_crtc_mask(crtc)))
+	if (!(mstc->mstm->outp->outp.info.heads & drm_crtc_mask(crtc)))
 		return NULL;
 
 	return &nv50_head(crtc)->msto->encoder;
@@ -1219,7 +1212,7 @@ nv50_mstc_new(struct nv50_mstm *mstm, struct drm_dp_mst_port *port,
 	nouveau_conn_attach_properties(&mstc->connector);
 
 	drm_for_each_crtc(crtc, dev) {
-		if (!(mstm->outp->dcb->heads & drm_crtc_mask(crtc)))
+		if (!(mstm->outp->outp.info.heads & drm_crtc_mask(crtc)))
 			continue;
 
 		drm_connector_attach_encoder(&mstc->connector,
@@ -1444,7 +1437,7 @@ static int
 nv50_mstm_new(struct nouveau_encoder *outp, struct drm_dp_aux *aux, int aux_max,
 	      int conn_base_id, struct nv50_mstm **pmstm)
 {
-	const int max_payloads = hweight8(outp->dcb->heads);
+	const int max_payloads = hweight8(outp->outp.info.heads);
 	struct drm_device *dev = outp->base.base.dev;
 	struct nv50_mstm *mstm;
 	int ret;
@@ -1513,7 +1506,7 @@ nv50_sor_atomic_disable(struct drm_encoder *encoder, struct drm_atomic_state *st
 	}
 #endif
 
-	if (nv_encoder->dcb->type == DCB_OUTPUT_DP) {
+	if (nv_encoder->outp.info.proto == NVIF_OUTP_DP) {
 		ret = drm_dp_dpcd_readb(aux, DP_SET_POWER, &pwr);
 
 		if (ret == 0) {
@@ -1558,8 +1551,8 @@ nv50_sor_atomic_enable(struct drm_encoder *encoder, struct drm_atomic_state *sta
 	    drm_detect_monitor_audio(nv_connector->edid))
 		hda = true;
 
-	switch (nv_encoder->dcb->type) {
-	case DCB_OUTPUT_TMDS:
+	switch (nv_encoder->outp.info.proto) {
+	case NVIF_OUTP_TMDS:
 		if (disp->disp->object.oclass == NV50_DISP ||
 		    !drm_detect_hdmi_monitor(nv_connector->edid))
 			nvif_outp_acquire_tmds(outp, nv_crtc->index, false, 0, 0, 0, false);
@@ -1574,15 +1567,14 @@ nv50_sor_atomic_enable(struct drm_encoder *encoder, struct drm_atomic_state *sta
 			 *  - Not an HDMI monitor, since there's no dual-link
 			 *    on HDMI.
 			 */
-			if (mode->clock >= 165000 &&
-			    nv_encoder->dcb->duallink_possible &&
+			if (mode->clock >= 165000 && nv_encoder->outp.info.tmds.dual &&
 			    !drm_detect_hdmi_monitor(nv_connector->edid))
 				proto = NV507D_SOR_SET_CONTROL_PROTOCOL_DUAL_TMDS;
 		} else {
 			proto = NV507D_SOR_SET_CONTROL_PROTOCOL_SINGLE_TMDS_B;
 		}
 		break;
-	case DCB_OUTPUT_LVDS:
+	case NVIF_OUTP_LVDS:
 		proto = NV507D_SOR_SET_CONTROL_PROTOCOL_LVDS_CUSTOM;
 
 		if (bios->fp_no_ddc) {
@@ -1611,7 +1603,7 @@ nv50_sor_atomic_enable(struct drm_encoder *encoder, struct drm_atomic_state *sta
 
 		nvif_outp_acquire_lvds(&nv_encoder->outp, lvds_dual, lvds_8bpc);
 		break;
-	case DCB_OUTPUT_DP:
+	case NVIF_OUTP_DP:
 		nvif_outp_acquire_dp(&nv_encoder->outp, nv_encoder->dp.dpcd, 0, 0, hda, false);
 		depth = nv50_dp_bpc_to_depth(asyh->or.bpc);
 
@@ -1655,7 +1647,7 @@ nv50_sor_destroy(struct drm_encoder *encoder)
 	nv50_mstm_del(&nv_encoder->dp.mstm);
 	drm_encoder_cleanup(encoder);
 
-	if (nv_encoder->dcb->type == DCB_OUTPUT_DP)
+	if (nv_encoder->outp.info.proto == NVIF_OUTP_DP)
 		mutex_destroy(&nv_encoder->dp.hpd_irq_lock);
 
 	kfree(encoder);
@@ -1666,89 +1658,79 @@ nv50_sor_func = {
 	.destroy = nv50_sor_destroy,
 };
 
-bool nv50_has_mst(struct nouveau_drm *drm)
-{
-	struct nvkm_bios *bios = nvxx_bios(&drm->client.device);
-	u32 data;
-	u8 ver, hdr, cnt, len;
-
-	data = nvbios_dp_table(bios, &ver, &hdr, &cnt, &len);
-	return data && ver >= 0x40 && (nvbios_rd08(bios, data + 0x08) & 0x04);
-}
-
 static int
-nv50_sor_create(struct drm_connector *connector, struct dcb_output *dcbe)
+nv50_sor_create(struct drm_connector *connector, struct nouveau_encoder *nv_encoder)
 {
 	struct nouveau_connector *nv_connector = nouveau_connector(connector);
 	struct nouveau_drm *drm = nouveau_drm(connector->dev);
 	struct nvkm_i2c *i2c = nvxx_i2c(&drm->client.device);
-	struct nouveau_encoder *nv_encoder;
 	struct drm_encoder *encoder;
 	struct nv50_disp *disp = nv50_disp(connector->dev);
 	int type, ret;
 
-	switch (dcbe->type) {
-	case DCB_OUTPUT_LVDS: type = DRM_MODE_ENCODER_LVDS; break;
-	case DCB_OUTPUT_TMDS:
-	case DCB_OUTPUT_DP:
-	default:
+	switch (nv_encoder->outp.info.proto) {
+	case NVIF_OUTP_TMDS:
+	case NVIF_OUTP_DP:
 		type = DRM_MODE_ENCODER_TMDS;
 		break;
+	case NVIF_OUTP_LVDS:
+		type = DRM_MODE_ENCODER_LVDS;
+		break;
+	default:
+		WARN_ON(1);
+		return -EINVAL;
 	}
 
-	nv_encoder = kzalloc(sizeof(*nv_encoder), GFP_KERNEL);
-	if (!nv_encoder)
-		return -ENOMEM;
-	nv_encoder->dcb = dcbe;
 	nv_encoder->update = nv50_sor_update;
 
 	encoder = to_drm_encoder(nv_encoder);
-	encoder->possible_crtcs = dcbe->heads;
+	encoder->possible_crtcs = nv_encoder->outp.info.heads;
 	encoder->possible_clones = 0;
 	drm_encoder_init(connector->dev, encoder, &nv50_sor_func, type,
-			 "sor-%04x-%04x", dcbe->hasht, dcbe->hashm);
+			 "sor-%d-%d", nv_encoder->outp.id, nv_encoder->outp.info.proto);
 	drm_encoder_helper_add(encoder, &nv50_sor_help);
 
 	drm_connector_attach_encoder(connector, encoder);
 
+//XXX: this is bogus on >=gm200...
+#if 0
 	disp->core->func->sor->get_caps(disp, nv_encoder, ffs(dcbe->or) - 1);
 	nv50_outp_dump_caps(drm, nv_encoder);
+#endif
 
-	if (dcbe->type == DCB_OUTPUT_DP) {
-		struct nvkm_i2c_aux *aux =
-			nvkm_i2c_aux_find(i2c, dcbe->i2c_index);
-
+	if (nv_encoder->outp.info.proto == NVIF_OUTP_DP) {
 		mutex_init(&nv_encoder->dp.hpd_irq_lock);
 
-		if (aux) {
-			if (disp->disp->object.oclass < GF110_DISP) {
-				/* HW has no support for address-only
-				 * transactions, so we're required to
-				 * use custom I2C-over-AUX code.
-				 */
-				nv_encoder->i2c = &aux->i2c;
-			} else {
-				nv_encoder->i2c = &nv_connector->aux.ddc;
-			}
-			nv_encoder->aux = aux;
+		nv_encoder->aux = nvkm_i2c_aux_find(i2c, nv_encoder->outp.info.dp.aux);
+		if (!nv_encoder->aux)
+			return -EINVAL;
+
+		if (disp->disp->object.oclass < GF110_DISP) {
+			/* HW has no support for address-only
+			 * transactions, so we're required to
+			 * use custom I2C-over-AUX code.
+			 */
+			nv_encoder->i2c = &nv_encoder->aux->i2c;
+		} else {
+			nv_encoder->i2c = &nv_connector->aux.ddc;
 		}
 
-		if (nv_connector->conn.info.type != NVIF_CONN_EDP &&
-		    nv50_has_mst(drm)) {
+		if (nv_connector->conn.info.type != NVIF_CONN_EDP && nv_encoder->outp.info.dp.mst) {
 			ret = nv50_mstm_new(nv_encoder, &nv_connector->aux,
 					    16, nv_connector->base.base.id,
 					    &nv_encoder->dp.mstm);
 			if (ret)
 				return ret;
 		}
-	} else {
+	} else
+	if (nv_encoder->outp.info.ddc != NVIF_OUTP_DDC_INVALID) {
 		struct nvkm_i2c_bus *bus =
-			nvkm_i2c_bus_find(i2c, dcbe->i2c_index);
+			nvkm_i2c_bus_find(i2c, nv_encoder->outp.info.ddc);
 		if (bus)
 			nv_encoder->i2c = &bus->i2c;
 	}
 
-	return nvif_outp_ctor(disp->disp, nv_encoder->base.base.name, dcbe->id, &nv_encoder->outp);
+	return 0;
 }
 
 /******************************************************************************
@@ -1803,12 +1785,12 @@ nv50_pior_atomic_enable(struct drm_encoder *encoder, struct drm_atomic_state *st
 	default: asyh->or.depth = NV837D_PIOR_SET_CONTROL_PIXEL_DEPTH_DEFAULT; break;
 	}
 
-	switch (nv_encoder->dcb->type) {
-	case DCB_OUTPUT_TMDS:
+	switch (nv_encoder->outp.info.proto) {
+	case NVIF_OUTP_TMDS:
 		ctrl |= NVDEF(NV507D, PIOR_SET_CONTROL, PROTOCOL, EXT_TMDS_ENC);
 		nvif_outp_acquire_tmds(&nv_encoder->outp, false, false, 0, 0, 0, false);
 		break;
-	case DCB_OUTPUT_DP:
+	case NVIF_OUTP_DP:
 		ctrl |= NVDEF(NV507D, PIOR_SET_CONTROL, PROTOCOL, EXT_TMDS_ENC);
 		nvif_outp_acquire_dp(&nv_encoder->outp, nv_encoder->dp.dpcd, 0, 0, false, false);
 		break;
@@ -1845,27 +1827,25 @@ nv50_pior_func = {
 };
 
 static int
-nv50_pior_create(struct drm_connector *connector, struct dcb_output *dcbe)
+nv50_pior_create(struct drm_connector *connector, struct nouveau_encoder *outp)
 {
 	struct drm_device *dev = connector->dev;
 	struct nouveau_drm *drm = nouveau_drm(dev);
-	struct nv50_disp *disp = nv50_disp(dev);
 	struct nvkm_i2c *i2c = nvxx_i2c(&drm->client.device);
 	struct nvkm_i2c_bus *bus = NULL;
 	struct nvkm_i2c_aux *aux = NULL;
 	struct i2c_adapter *ddc;
-	struct nouveau_encoder *nv_encoder;
 	struct drm_encoder *encoder;
 	int type;
 
-	switch (dcbe->type) {
-	case DCB_OUTPUT_TMDS:
-		bus  = nvkm_i2c_bus_find(i2c, NVKM_I2C_BUS_EXT(dcbe->extdev));
+	switch (outp->outp.info.proto) {
+	case NVIF_OUTP_TMDS:
+		bus  = nvkm_i2c_bus_find(i2c, outp->outp.info.ddc);
 		ddc  = bus ? &bus->i2c : NULL;
 		type = DRM_MODE_ENCODER_TMDS;
 		break;
-	case DCB_OUTPUT_DP:
-		aux  = nvkm_i2c_aux_find(i2c, NVKM_I2C_AUX_EXT(dcbe->extdev));
+	case NVIF_OUTP_DP:
+		aux  = nvkm_i2c_aux_find(i2c, outp->outp.info.dp.aux);
 		ddc  = aux ? &aux->i2c : NULL;
 		type = DRM_MODE_ENCODER_TMDS;
 		break;
@@ -1873,26 +1853,25 @@ nv50_pior_create(struct drm_connector *connector, struct dcb_output *dcbe)
 		return -ENODEV;
 	}
 
-	nv_encoder = kzalloc(sizeof(*nv_encoder), GFP_KERNEL);
-	if (!nv_encoder)
-		return -ENOMEM;
-	nv_encoder->dcb = dcbe;
-	nv_encoder->i2c = ddc;
-	nv_encoder->aux = aux;
+	outp->i2c = ddc;
+	outp->aux = aux;
 
-	encoder = to_drm_encoder(nv_encoder);
-	encoder->possible_crtcs = dcbe->heads;
+	encoder = to_drm_encoder(outp);
+	encoder->possible_crtcs = outp->outp.info.heads;
 	encoder->possible_clones = 0;
 	drm_encoder_init(connector->dev, encoder, &nv50_pior_func, type,
-			 "pior-%04x-%04x", dcbe->hasht, dcbe->hashm);
+			 "pior-%d-%d", outp->outp.id, outp->outp.info.proto);
 	drm_encoder_helper_add(encoder, &nv50_pior_help);
 
 	drm_connector_attach_encoder(connector, encoder);
 
+//XXX: not bogus, but, how exactly?
+#if 0
 	disp->core->func->pior->get_caps(disp, nv_encoder, ffs(dcbe->or) - 1);
 	nv50_outp_dump_caps(drm, nv_encoder);
+#endif
 
-	return nvif_outp_ctor(disp->disp, nv_encoder->base.base.name, dcbe->id, &nv_encoder->outp);
+	return 0;
 }
 
 /******************************************************************************
@@ -2518,12 +2497,10 @@ nv50_display_create(struct drm_device *dev)
 {
 	struct nvif_device *device = &nouveau_drm(dev)->client.device;
 	struct nouveau_drm *drm = nouveau_drm(dev);
-	struct dcb_table *dcb = &drm->vbios.dcb;
 	struct drm_connector *connector, *tmp;
 	struct nv50_disp *disp;
-	struct dcb_output *dcbe;
 	int crtcs, ret, i;
-	bool has_mst = nv50_has_mst(drm);
+	bool has_mst = false;
 
 	disp = kzalloc(sizeof(*disp), GFP_KERNEL);
 	if (!disp)
@@ -2599,6 +2576,51 @@ nv50_display_create(struct drm_device *dev)
 		dev->mode_config.cursor_height = 64;
 	}
 
+	/* create encoder/connector objects based on VBIOS DCB table */
+	for_each_set_bit(i, &disp->disp->outp_mask, sizeof(disp->disp->outp_mask) * 8) {
+		struct nouveau_encoder *outp;
+
+		outp = kzalloc(sizeof(*outp), GFP_KERNEL);
+		if (WARN_ON(!outp))
+			break;
+
+		ret = nvif_outp_ctor(disp->disp, "kmsOutp", i, &outp->outp);
+		if (ret)
+			continue;
+
+		connector = nouveau_connector_create(dev, outp->outp.info.conn);
+		if (IS_ERR(connector))
+			continue;
+
+		switch (outp->outp.info.type) {
+		case NVIF_OUTP_DAC : ret = nv50_dac_create(connector, outp); break;
+		case NVIF_OUTP_SOR : ret = nv50_sor_create(connector, outp); break;
+		case NVIF_OUTP_PIOR: ret = nv50_pior_create(connector, outp); break;
+		default:
+			WARN_ON(1);
+			continue;
+		}
+
+		if (ret) {
+			NV_WARN(drm, "failed to create encoder %d/%d/%d: %d\n",
+				i, outp->outp.info.type, outp->outp.info.proto, ret);
+			continue;
+		}
+
+		if (outp->outp.info.proto == NVIF_OUTP_DP && outp->outp.info.dp.mst)
+			has_mst = true;
+	}
+
+	/* cull any connectors we created that don't have an encoder */
+	list_for_each_entry_safe(connector, tmp, &dev->mode_config.connector_list, head) {
+		if (connector->possible_encoders)
+			continue;
+
+		NV_WARN(drm, "%s has no encoders, removing\n",
+			connector->name);
+		connector->funcs->destroy(connector);
+	}
+
 	/* create crtc objects to represent the hw heads */
 	if (disp->disp->object.oclass >= GV100_DISP)
 		crtcs = nvif_rd32(&device->object, 0x610060) & 0xff;
@@ -2640,48 +2662,6 @@ nv50_display_create(struct drm_device *dev)
 			 */
 			head->msto->encoder.possible_crtcs = crtcs;
 		}
-	}
-
-	/* create encoder/connector objects based on VBIOS DCB table */
-	for (i = 0, dcbe = &dcb->entry[0]; i < dcb->entries; i++, dcbe++) {
-		connector = nouveau_connector_create(dev, dcbe->connector);
-		if (IS_ERR(connector))
-			continue;
-
-		if (dcbe->location == DCB_LOC_ON_CHIP) {
-			switch (dcbe->type) {
-			case DCB_OUTPUT_TMDS:
-			case DCB_OUTPUT_LVDS:
-			case DCB_OUTPUT_DP:
-				ret = nv50_sor_create(connector, dcbe);
-				break;
-			case DCB_OUTPUT_ANALOG:
-				ret = nv50_dac_create(connector, dcbe);
-				break;
-			default:
-				ret = -ENODEV;
-				break;
-			}
-		} else {
-			ret = nv50_pior_create(connector, dcbe);
-		}
-
-		if (ret) {
-			NV_WARN(drm, "failed to create encoder %d/%d/%d: %d\n",
-				     dcbe->location, dcbe->type,
-				     ffs(dcbe->or) - 1, ret);
-			ret = 0;
-		}
-	}
-
-	/* cull any connectors we created that don't have an encoder */
-	list_for_each_entry_safe(connector, tmp, &dev->mode_config.connector_list, head) {
-		if (connector->possible_encoders)
-			continue;
-
-		NV_WARN(drm, "%s has no encoders, removing\n",
-			connector->name);
-		connector->funcs->destroy(connector);
 	}
 
 	/* Disable vblank irqs aggressively for power-saving, safe on nv50+ */

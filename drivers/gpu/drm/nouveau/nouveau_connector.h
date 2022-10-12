@@ -163,7 +163,7 @@ nouveau_connector_is_mst(struct drm_connector *connector)
 	if (connector->connector_type != DRM_MODE_CONNECTOR_DisplayPort)
 		return false;
 
-	nv_encoder = find_encoder(connector, DCB_OUTPUT_ANY);
+	nv_encoder = find_encoder(connector, -1);
 	if (!nv_encoder)
 		return false;
 
