@@ -211,6 +211,40 @@ nv50_fb_tags(struct nvkm_fb *base)
 	return 0;
 }
 
+u64
+nv50_fb_vidmem_size(struct nvkm_fb *fb, u64 *plower, u64 *pubase, u64 *pusize)
+{
+	u64 size;
+
+	if (nv50_fb(fb)->func->vidmem.size)
+		return nv50_fb(fb)->func->vidmem.size(fb, plower, pubase, pusize);
+
+	size = nvkm_rd32(fb->subdev.device, 0x10020c);
+	return (size & 0x000000ff) << 32 | (size & 0xffffff00);
+}
+
+enum nvkm_ram_type
+nv50_fb_vidmem_type(struct nvkm_fb *fb)
+{
+	struct nvkm_device *device = fb->subdev.device;
+
+	if (nv50_fb(fb)->func->vidmem.type)
+		return nv50_fb(fb)->func->vidmem.type(fb);
+
+	switch (nvkm_rd32(device, 0x100714) & 0x00000007) {
+	case 0: return NVKM_RAM_TYPE_DDR1;
+	case 1:
+		if (nvkm_fb_bios_memtype(device->bios) == NVKM_RAM_TYPE_DDR3)
+			return NVKM_RAM_TYPE_DDR3;
+		return NVKM_RAM_TYPE_DDR2;
+	case 2: return NVKM_RAM_TYPE_GDDR3;
+	case 3: return NVKM_RAM_TYPE_GDDR4;
+	case 4: return NVKM_RAM_TYPE_GDDR5;
+	default:
+		return NVKM_RAM_TYPE_UNKNOWN;
+	}
+}
+
 static void
 nv50_fb_sysmem_flush_page_init(struct nvkm_fb *fb)
 {
@@ -232,6 +266,8 @@ nv50_fb_ = {
 	.init = nv50_fb_init,
 	.intr = nv50_fb_intr,
 	.sysmem.flush_page_init = nv50_fb_sysmem_flush_page_init,
+	.vidmem.type = nv50_fb_vidmem_type,
+	.vidmem.size = nv50_fb_vidmem_size,
 	.ram_new = nv50_fb_ram_new,
 };
 

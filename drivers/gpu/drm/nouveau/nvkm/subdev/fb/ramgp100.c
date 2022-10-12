@@ -71,18 +71,8 @@ gp100_ram_init(struct nvkm_ram *ram)
 	return 0;
 }
 
-static u32
-gp100_ram_probe_fbpa(struct nvkm_device *device, int fbpa)
-{
-	return nvkm_rd32(device, 0x90020c + (fbpa * 0x4000));
-}
-
 static const struct nvkm_ram_func
 gp100_ram = {
-	.upper = 0x1000000000ULL,
-	.probe_fbp = gm107_ram_probe_fbp,
-	.probe_fbp_amount = gm200_ram_probe_fbp_amount,
-	.probe_fbpa_amount = gp100_ram_probe_fbpa,
 	.init = gp100_ram_init,
 };
 

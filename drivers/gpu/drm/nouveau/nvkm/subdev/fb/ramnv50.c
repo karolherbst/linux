@@ -542,31 +542,11 @@ nv50_ram_ctor(const struct nvkm_ram_func *func,
 	      struct nvkm_fb *fb, struct nvkm_ram *ram)
 {
 	struct nvkm_device *device = fb->subdev.device;
-	struct nvkm_bios *bios = device->bios;
 	const u32 rsvd_head = ( 256 * 1024); /* vga memory */
 	const u32 rsvd_tail = (1024 * 1024); /* vbios etc */
-	u64 size = nvkm_rd32(device, 0x10020c);
-	enum nvkm_ram_type type = NVKM_RAM_TYPE_UNKNOWN;
 	int ret;
 
-	switch (nvkm_rd32(device, 0x100714) & 0x00000007) {
-	case 0: type = NVKM_RAM_TYPE_DDR1; break;
-	case 1:
-		if (nvkm_fb_bios_memtype(bios) == NVKM_RAM_TYPE_DDR3)
-			type = NVKM_RAM_TYPE_DDR3;
-		else
-			type = NVKM_RAM_TYPE_DDR2;
-		break;
-	case 2: type = NVKM_RAM_TYPE_GDDR3; break;
-	case 3: type = NVKM_RAM_TYPE_GDDR4; break;
-	case 4: type = NVKM_RAM_TYPE_GDDR5; break;
-	default:
-		break;
-	}
-
-	size = (size & 0x000000ff) << 32 | (size & 0xffffff00);
-
-	ret = nvkm_ram_ctor(func, fb, type, size, ram);
+	ret = nvkm_ram_ctor(func, fb, rsvd_head, rsvd_tail, ram);
 	if (ret)
 		return ret;
 
@@ -577,7 +557,7 @@ nv50_ram_ctor(const struct nvkm_ram_func *func,
 
 	return nvkm_mm_init(&ram->vram, NVKM_RAM_MM_NORMAL,
 			    rsvd_head >> NVKM_RAM_MM_SHIFT,
-			    (size - rsvd_head - rsvd_tail) >> NVKM_RAM_MM_SHIFT,
+			    (ram->size - rsvd_head - rsvd_tail) >> NVKM_RAM_MM_SHIFT,
 			    nv50_fb_vram_rblock(ram) >> NVKM_RAM_MM_SHIFT);
 }
 

@@ -43,6 +43,21 @@ nv40_fb_tile_comp(struct nvkm_fb *fb, int i, u32 size, u32 flags,
 	}
 }
 
+static enum nvkm_ram_type
+nv40_fb_vidmem_type(struct nvkm_fb *fb)
+{
+	u32 pbus1218 = nvkm_rd32(fb->subdev.device, 0x001218);
+
+	switch (pbus1218 & 0x00000300) {
+	case 0x00000000: return NVKM_RAM_TYPE_SDRAM;
+	case 0x00000100: return NVKM_RAM_TYPE_DDR1 ;
+	case 0x00000200: return NVKM_RAM_TYPE_GDDR3;
+	case 0x00000300: return NVKM_RAM_TYPE_DDR2;
+	default:
+		return NVKM_RAM_TYPE_UNKNOWN;
+	}
+}
+
 static void
 nv40_fb_init(struct nvkm_fb *fb)
 {
@@ -53,6 +68,8 @@ static const struct nvkm_fb_func
 nv40_fb = {
 	.tags = nv20_fb_tags,
 	.init = nv40_fb_init,
+	.vidmem.type = nv40_fb_vidmem_type,
+	.vidmem.size = nv10_fb_vidmem_size,
 	.tile.regions = 8,
 	.tile.init = nv30_fb_tile_init,
 	.tile.comp = nv40_fb_tile_comp,

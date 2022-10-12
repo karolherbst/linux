@@ -10,6 +10,7 @@ struct nv50_fb {
 };
 
 struct nv50_fb_func {
+	struct nvkm_fb_func_vidmem vidmem;
 	int (*ram_new)(struct nvkm_fb *, struct nvkm_ram **);
 	u32 (*tags)(struct nvkm_fb *);
 	u32 trap;

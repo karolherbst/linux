@@ -58,11 +58,9 @@ mcp77_ram_func = {
 int
 mcp77_ram_new(struct nvkm_fb *fb, struct nvkm_ram **pram)
 {
-	struct nvkm_device *device = fb->subdev.device;
 	u32 rsvd_head = ( 256 * 1024); /* vga memory */
 	u32 rsvd_tail = (1024 * 1024) + 0x1000; /* vbios etc + poller mem */
-	u64 base = (u64)nvkm_rd32(device, 0x100e10) << 12;
-	u64 size = (u64)nvkm_rd32(device, 0x100e14) << 12;
+	u64 base, size = fb->func->vidmem.size(fb, &base, NULL, NULL);
 	struct mcp77_ram *ram;
 	int ret;
 
@@ -70,8 +68,7 @@ mcp77_ram_new(struct nvkm_fb *fb, struct nvkm_ram **pram)
 		return -ENOMEM;
 	*pram = &ram->base;
 
-	ret = nvkm_ram_ctor(&mcp77_ram_func, fb, NVKM_RAM_TYPE_STOLEN,
-			    size, &ram->base);
+	ret = nvkm_ram_ctor(&mcp77_ram_func, fb, rsvd_head, rsvd_tail, &ram->base);
 	if (ret)
 		return ret;
 

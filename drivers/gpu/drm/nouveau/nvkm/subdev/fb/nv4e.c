@@ -26,14 +26,22 @@
 #include "priv.h"
 #include "ram.h"
 
+static enum nvkm_ram_type
+nv4e_fb_vidmem_type(struct nvkm_fb *fb)
+{
+	return NVKM_RAM_TYPE_UNKNOWN;
+}
+
 static const struct nvkm_fb_func
 nv4e_fb = {
 	.init = nv44_fb_init,
+	.vidmem.type = nv4e_fb_vidmem_type,
+	.vidmem.size = nv10_fb_vidmem_size,
 	.tile.regions = 12,
 	.tile.init = nv46_fb_tile_init,
 	.tile.fini = nv20_fb_tile_fini,
 	.tile.prog = nv44_fb_tile_prog,
-	.ram_new = nv44_ram_new,
+	.ram_new = nv04_ram_new,
 };
 
 int

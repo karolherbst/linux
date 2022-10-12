@@ -24,6 +24,14 @@
 #include "gf100.h"
 #include "ram.h"
 
+u32
+gm107_fb_vidmem_probe_fbp(struct nvkm_fb *fb, int fbp, int *pltcs)
+{
+	u32 fbpao = nvkm_rd32(fb->subdev.device, 0x021c14);
+
+	return fb->func->vidmem.probe_fbp_amount(fb, fbpao, fbp, pltcs);
+}
+
 static const struct nvkm_fb_func
 gm107_fb = {
 	.dtor = gf100_fb_dtor,
@@ -31,7 +39,13 @@ gm107_fb = {
 	.init = gf100_fb_init,
 	.init_page = gf100_fb_init_page,
 	.intr = gf100_fb_intr,
-	.ram_new = gm107_ram_new,
+	.vidmem.type = gf100_fb_vidmem_type,
+	.vidmem.size = gf100_fb_vidmem_size,
+	.vidmem.upper = 0x1000000000ULL,
+	.vidmem.probe_fbp = gm107_fb_vidmem_probe_fbp,
+	.vidmem.probe_fbp_amount = gf108_fb_vidmem_probe_fbp_amount,
+	.vidmem.probe_fbpa_amount = gf100_fb_vidmem_probe_fbpa_amount,
+	.ram_new = gk104_ram_new,
 	.default_bigpage = 17,
 };
 

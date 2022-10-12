@@ -10,6 +10,5 @@ struct nv40_ram {
 	u32 coef;
 };
 
-int nv40_ram_new_(struct nvkm_fb *fb, enum nvkm_ram_type, u64,
-		  struct nvkm_ram **);
+int nv40_ram_new_(struct nvkm_fb *, struct nvkm_ram **);
 #endif

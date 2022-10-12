@@ -57,6 +57,14 @@ nvkm_fb_tile_prog(struct nvkm_fb *fb, int region, struct nvkm_fb_tile *tile)
 	}
 }
 
+u64
+nvkm_fb_vidmem_size(struct nvkm_device *device)
+{
+	struct nvkm_fb *fb = device->fb;
+
+	return fb->func->vidmem.size(fb, NULL, NULL, NULL);
+}
+
 static void
 nvkm_fb_sysmem_flush_page_init(struct nvkm_device *device)
 {

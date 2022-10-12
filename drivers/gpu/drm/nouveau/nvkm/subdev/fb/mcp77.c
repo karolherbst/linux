@@ -24,8 +24,21 @@
 #include "nv50.h"
 #include "ram.h"
 
+static u64
+mcp77_fb_vidmem_size(struct nvkm_fb *fb, u64 *plower, u64 *pubase, u64 *pusize)
+{
+	struct nvkm_device *device = fb->subdev.device;
+
+	if (plower)
+		*plower = (u64)nvkm_rd32(device, 0x100e10) << 12;
+
+	return (u64)nvkm_rd32(device, 0x100e14) << 12;
+}
+
 static const struct nv50_fb_func
 mcp77_fb = {
+	.vidmem.type = nv1a_fb_vidmem_type,
+	.vidmem.size = mcp77_fb_vidmem_size,
 	.ram_new = mcp77_ram_new,
 	.trap = 0x001d07ff,
 };

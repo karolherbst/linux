@@ -26,13 +26,52 @@
 #include "priv.h"
 #include "ram.h"
 
+static u64
+nv1a_fb_vidmem_size(struct nvkm_fb *fb, u64 *plower, u64 *pubase, u64 *pusize)
+{
+	struct pci_dev *bridge;
+	u32 mem, mib;
+	int domain = 0;
+	struct pci_dev *pdev = NULL;
+
+	if (dev_is_pci(fb->subdev.device->dev))
+		pdev = to_pci_dev(fb->subdev.device->dev);
+
+	if (pdev)
+		domain = pci_domain_nr(pdev->bus);
+
+	bridge = pci_get_domain_bus_and_slot(domain, 0, PCI_DEVFN(0, 1));
+	if (!bridge) {
+		nvkm_error(&fb->subdev, "no bridge device\n");
+		return -ENODEV;
+	}
+
+	if (fb->subdev.device->chipset == 0x1a) {
+		pci_read_config_dword(bridge, 0x7c, &mem);
+		mib = ((mem >> 6) & 31) + 1;
+	} else {
+		pci_read_config_dword(bridge, 0x84, &mem);
+		mib = ((mem >> 4) & 127) + 1;
+	}
+
+	return mib << 20;
+}
+
+enum nvkm_ram_type
+nv1a_fb_vidmem_type(struct nvkm_fb *fb)
+{
+	return NVKM_RAM_TYPE_STOLEN;
+}
+
 static const struct nvkm_fb_func
 nv1a_fb = {
+	.vidmem.type = nv1a_fb_vidmem_type,
+	.vidmem.size = nv1a_fb_vidmem_size,
 	.tile.regions = 8,
 	.tile.init = nv10_fb_tile_init,
 	.tile.fini = nv10_fb_tile_fini,
 	.tile.prog = nv10_fb_tile_prog,
-	.ram_new = nv1a_ram_new,
+	.ram_new = nv04_ram_new,
 };
 
 int

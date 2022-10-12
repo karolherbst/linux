@@ -40,6 +40,12 @@ ga102_fb_vpr_scrub(struct nvkm_fb *fb)
 	return ret;
 }
 
+static u64
+ga102_fb_vidmem_size(struct nvkm_fb *fb, u64 *plower, u64 *pubase, u64 *pusize)
+{
+	return (u64)nvkm_rd32(fb->subdev.device, 0x1183a4) << 20;
+}
+
 static const struct nvkm_fb_func
 ga102_fb = {
 	.dtor = gf100_fb_dtor,
@@ -48,7 +54,9 @@ ga102_fb = {
 	.init_page = gv100_fb_init_page,
 	.init_unkn = gp100_fb_init_unkn,
 	.sysmem.flush_page_init = gf100_fb_sysmem_flush_page_init,
-	.ram_new = ga102_ram_new,
+	.vidmem.type = gf100_fb_vidmem_type,
+	.vidmem.size = ga102_fb_vidmem_size,
+	.ram_new = nv04_ram_new,
 	.default_bigpage = 16,
 	.vpr.scrub_required = tu102_fb_vpr_scrub_required,
 	.vpr.scrub = ga102_fb_vpr_scrub,

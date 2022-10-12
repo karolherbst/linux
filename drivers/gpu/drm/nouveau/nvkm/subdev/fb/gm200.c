@@ -52,6 +52,31 @@ gm200_fb_init(struct nvkm_fb *base)
 		  min(nvkm_memory_size(fb->base.mmu_rd) >> 16, (u64)2) << 17);
 }
 
+u32
+gm200_fb_vidmem_probe_fbp_amount(struct nvkm_fb *fb, u32 fbpao, int fbp, int *pltcs)
+{
+	struct nvkm_device *device = fb->subdev.device;
+	u32 ltcs  = nvkm_rd32(device, 0x022450);
+	u32 fbpas = nvkm_rd32(device, 0x022458);
+	u32 fbpa  = fbp * fbpas;
+	u32 size  = 0;
+
+	if (!(nvkm_rd32(device, 0x021d38) & BIT(fbp))) {
+		u32 ltco = nvkm_rd32(device, 0x021d70 + (fbp * 4));
+		u32 ltcm = ~ltco & ((1 << ltcs) - 1);
+
+		while (fbpas--) {
+			if (!(fbpao & (1 << fbpa)))
+				size += fb->func->vidmem.probe_fbpa_amount(device, fbpa);
+			fbpa++;
+		}
+
+		*pltcs = hweight32(ltcm);
+	}
+
+	return size;
+}
+
 static const struct nvkm_fb_func
 gm200_fb = {
 	.dtor = gf100_fb_dtor,
@@ -60,7 +85,13 @@ gm200_fb = {
 	.init_page = gm200_fb_init_page,
 	.intr = gf100_fb_intr,
 	.sysmem.flush_page_init = gf100_fb_sysmem_flush_page_init,
-	.ram_new = gm200_ram_new,
+	.vidmem.type = gf100_fb_vidmem_type,
+	.vidmem.size = gf100_fb_vidmem_size,
+	.vidmem.upper = 0x1000000000ULL,
+	.vidmem.probe_fbp = gm107_fb_vidmem_probe_fbp,
+	.vidmem.probe_fbp_amount = gm200_fb_vidmem_probe_fbp_amount,
+	.vidmem.probe_fbpa_amount = gf100_fb_vidmem_probe_fbpa_amount,
+	.ram_new = gk104_ram_new,
 	.default_bigpage = 0 /* per-instance. */,
 };
 

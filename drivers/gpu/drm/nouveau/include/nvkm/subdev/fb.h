@@ -58,6 +58,7 @@ struct nvkm_fb {
 	struct nvkm_memory *mmu_wr;
 };
 
+u64 nvkm_fb_vidmem_size(struct nvkm_device *);
 int nvkm_fb_mem_unlock(struct nvkm_fb *);
 
 void nvkm_fb_tile_init(struct nvkm_fb *, int region, u32 addr, u32 size,
@@ -161,12 +162,6 @@ nvkm_ram_get(struct nvkm_device *, u8 heap, u8 type, u8 page, u64 size,
 	     bool contig, bool back, struct nvkm_memory **);
 
 struct nvkm_ram_func {
-	u64 upper;
-	u32 (*probe_fbp)(const struct nvkm_ram_func *, struct nvkm_device *,
-			 int fbp, int *pltcs);
-	u32 (*probe_fbp_amount)(const struct nvkm_ram_func *, u32 fbpao,
-				struct nvkm_device *, int fbp, int *pltcs);
-	u32 (*probe_fbpa_amount)(struct nvkm_device *, int fbpa);
 	void *(*dtor)(struct nvkm_ram *);
 	int (*init)(struct nvkm_ram *);
 

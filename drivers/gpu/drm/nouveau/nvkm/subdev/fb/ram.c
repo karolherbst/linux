@@ -178,8 +178,8 @@ nvkm_ram_del(struct nvkm_ram **pram)
 }
 
 int
-nvkm_ram_ctor(const struct nvkm_ram_func *func, struct nvkm_fb *fb,
-	      enum nvkm_ram_type type, u64 size, struct nvkm_ram *ram)
+nvkm_ram_ctor(const struct nvkm_ram_func *func, struct nvkm_fb *fb, u32 rsvd_head, u32 rsvd_tail,
+	      struct nvkm_ram *ram)
 {
 	static const char *name[] = {
 		[NVKM_RAM_TYPE_UNKNOWN] = "of unknown memory type",
@@ -200,16 +200,18 @@ nvkm_ram_ctor(const struct nvkm_ram_func *func, struct nvkm_fb *fb,
 	struct nvkm_subdev *subdev = &fb->subdev;
 	int ret;
 
-	nvkm_info(subdev, "%d MiB %s\n", (int)(size >> 20), name[type]);
 	ram->func = func;
 	ram->fb = fb;
-	ram->type = type;
-	ram->size = size;
+	ram->type = fb->func->vidmem.type(fb);
+	ram->size = fb->func->vidmem.size(fb, NULL, NULL, NULL);
 	mutex_init(&ram->mutex);
 
+	nvkm_info(subdev, "%d MiB %s\n", (int)(ram->size >> 20), name[ram->type]);
+
 	if (!nvkm_mm_initialised(&ram->vram)) {
-		ret = nvkm_mm_init(&ram->vram, NVKM_RAM_MM_NORMAL, 0,
-				   size >> NVKM_RAM_MM_SHIFT, 1);
+		ret = nvkm_mm_init(&ram->vram, NVKM_RAM_MM_NORMAL, rsvd_head >> NVKM_RAM_MM_SHIFT,
+				   (ram->size - rsvd_head - rsvd_tail) >> NVKM_RAM_MM_SHIFT,
+				   1);
 		if (ret)
 			return ret;
 	}
@@ -218,10 +220,10 @@ nvkm_ram_ctor(const struct nvkm_ram_func *func, struct nvkm_fb *fb,
 }
 
 int
-nvkm_ram_new_(const struct nvkm_ram_func *func, struct nvkm_fb *fb,
-	      enum nvkm_ram_type type, u64 size, struct nvkm_ram **pram)
+nvkm_ram_new_(const struct nvkm_ram_func *func, struct nvkm_fb *fb, u32 rsvd_head, u32 rsvd_tail,
+	      struct nvkm_ram **pram)
 {
 	if (!(*pram = kzalloc(sizeof(**pram), GFP_KERNEL)))
 		return -ENOMEM;
-	return nvkm_ram_ctor(func, fb, type, size, *pram);
+	return nvkm_ram_ctor(func, fb, rsvd_head, rsvd_tail, *pram);
 }

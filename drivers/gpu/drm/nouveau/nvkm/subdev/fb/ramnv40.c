@@ -188,33 +188,22 @@ nv40_ram_func = {
 };
 
 int
-nv40_ram_new_(struct nvkm_fb *fb, enum nvkm_ram_type type, u64 size,
-	      struct nvkm_ram **pram)
+nv40_ram_new_(struct nvkm_fb *fb, struct nvkm_ram **pram)
 {
 	struct nv40_ram *ram;
 	if (!(ram = kzalloc(sizeof(*ram), GFP_KERNEL)))
 		return -ENOMEM;
 	*pram = &ram->base;
-	return nvkm_ram_ctor(&nv40_ram_func, fb, type, size, &ram->base);
+	return nvkm_ram_ctor(&nv40_ram_func, fb, 0, 0, &ram->base);
 }
 
 int
 nv40_ram_new(struct nvkm_fb *fb, struct nvkm_ram **pram)
 {
 	struct nvkm_device *device = fb->subdev.device;
-	u32 pbus1218 = nvkm_rd32(device, 0x001218);
-	u32     size = nvkm_rd32(device, 0x10020c) & 0xff000000;
-	enum nvkm_ram_type type = NVKM_RAM_TYPE_UNKNOWN;
 	int ret;
 
-	switch (pbus1218 & 0x00000300) {
-	case 0x00000000: type = NVKM_RAM_TYPE_SDRAM; break;
-	case 0x00000100: type = NVKM_RAM_TYPE_DDR1 ; break;
-	case 0x00000200: type = NVKM_RAM_TYPE_GDDR3; break;
-	case 0x00000300: type = NVKM_RAM_TYPE_DDR2 ; break;
-	}
-
-	ret = nv40_ram_new_(fb, type, size, pram);
+	ret = nv40_ram_new_(fb, pram);
 	if (ret)
 		return ret;
 

@@ -31,6 +31,8 @@ gm20b_fb = {
 	.init_page = gm200_fb_init_page,
 	.intr = gf100_fb_intr,
 	.sysmem.flush_page_init = gf100_fb_sysmem_flush_page_init,
+	.vidmem.type = gf100_fb_vidmem_type,
+	.vidmem.size = gf100_fb_vidmem_size,
 	.default_bigpage = 0 /* per-instance. */,
 };
 

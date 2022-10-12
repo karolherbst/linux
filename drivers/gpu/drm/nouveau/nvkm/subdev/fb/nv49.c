@@ -26,16 +26,32 @@
 #include "priv.h"
 #include "ram.h"
 
+static enum nvkm_ram_type
+nv49_fb_vidmem_type(struct nvkm_fb *fb)
+{
+	u32 fb914 = nvkm_rd32(fb->subdev.device, 0x100914);
+
+	switch (fb914 & 0x00000003) {
+	case 0x00000000: return NVKM_RAM_TYPE_DDR1;
+	case 0x00000001: return NVKM_RAM_TYPE_DDR2;
+	case 0x00000002: return NVKM_RAM_TYPE_GDDR3;
+	default:
+		return NVKM_RAM_TYPE_UNKNOWN;
+	}
+}
+
 static const struct nvkm_fb_func
 nv49_fb = {
 	.tags = nv20_fb_tags,
 	.init = nv41_fb_init,
+	.vidmem.type = nv49_fb_vidmem_type,
+	.vidmem.size = nv10_fb_vidmem_size,
 	.tile.regions = 15,
 	.tile.init = nv30_fb_tile_init,
 	.tile.comp = nv40_fb_tile_comp,
 	.tile.fini = nv20_fb_tile_fini,
 	.tile.prog = nv41_fb_tile_prog,
-	.ram_new = nv49_ram_new,
+	.ram_new = nv40_ram_new,
 };
 
 int

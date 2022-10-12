@@ -25,6 +25,35 @@
 #include "ram.h"
 #include "regsnv04.h"
 
+static u64
+nv04_fb_vidmem_size(struct nvkm_fb *fb, u64 *plower, u64 *pubase, u64 *pusize)
+{
+	u32 boot0 = nvkm_rd32(fb->subdev.device, NV04_PFB_BOOT_0);
+
+	if (boot0 & 0x00000100)
+		return (((boot0 >> 12) & 0xf) * 2 + 2) << 20;
+
+	switch (boot0 & NV04_PFB_BOOT_0_RAM_AMOUNT) {
+	case NV04_PFB_BOOT_0_RAM_AMOUNT_32MB: return 32 * 1024 * 1024;
+	case NV04_PFB_BOOT_0_RAM_AMOUNT_16MB: return 16 * 1024 * 1024;
+	case NV04_PFB_BOOT_0_RAM_AMOUNT_8MB : return  8 * 1024 * 1024;
+	case NV04_PFB_BOOT_0_RAM_AMOUNT_4MB : return  4 * 1024 * 1024;
+	default:
+		return 0;
+	}
+}
+
+static enum nvkm_ram_type
+nv04_fb_vidmem_type(struct nvkm_fb *fb)
+{
+	u32 boot0 = nvkm_rd32(fb->subdev.device, NV04_PFB_BOOT_0);
+
+	if ((boot0 & 0x00000038) <= 0x10)
+		return NVKM_RAM_TYPE_SGRAM;
+
+	return NVKM_RAM_TYPE_SDRAM;
+}
+
 static void
 nv04_fb_init(struct nvkm_fb *fb)
 {
@@ -40,6 +69,8 @@ nv04_fb_init(struct nvkm_fb *fb)
 static const struct nvkm_fb_func
 nv04_fb = {
 	.init = nv04_fb_init,
+	.vidmem.type = nv04_fb_vidmem_type,
+	.vidmem.size = nv04_fb_vidmem_size,
 	.ram_new = nv04_ram_new,
 };
 

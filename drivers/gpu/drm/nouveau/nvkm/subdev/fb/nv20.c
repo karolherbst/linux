@@ -84,8 +84,25 @@ nv20_fb_tags(struct nvkm_fb *fb)
 	return tags ? tags + 1 : 0;
 }
 
+static enum nvkm_ram_type
+nv20_fb_vidmem_type(struct nvkm_fb *fb)
+{
+	u32 pbus1218 = nvkm_rd32(fb->subdev.device, 0x001218);
+
+	switch (pbus1218 & 0x00000300) {
+	case 0x00000000: return NVKM_RAM_TYPE_SDRAM;
+	case 0x00000100: return NVKM_RAM_TYPE_DDR1 ;
+	case 0x00000200: return NVKM_RAM_TYPE_GDDR3;
+	case 0x00000300: return NVKM_RAM_TYPE_GDDR2;
+	default:
+		return NVKM_RAM_TYPE_UNKNOWN;
+	}
+}
+
 static const struct nvkm_fb_func
 nv20_fb = {
+	.vidmem.type = nv20_fb_vidmem_type,
+	.vidmem.size = nv10_fb_vidmem_size,
 	.tags = nv20_fb_tags,
 	.tile.regions = 8,
 	.tile.init = nv20_fb_tile_init,

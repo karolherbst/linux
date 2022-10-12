@@ -28,6 +28,72 @@
 #include <core/option.h>
 #include <subdev/therm.h>
 
+u32
+gf100_fb_vidmem_probe_fbpa_amount(struct nvkm_device *device, int fbpa)
+{
+	return nvkm_rd32(device, 0x11020c + (fbpa * 0x1000));
+}
+
+static u32
+gf100_fb_vidmem_probe_fbp_amount(struct nvkm_fb *fb, u32 fbpao, int fbp, int *pltcs)
+{
+	if (!(fbpao & BIT(fbp))) {
+		*pltcs = 1;
+		return fb->func->vidmem.probe_fbpa_amount(fb->subdev.device, fbp);
+	}
+
+	return 0;
+}
+
+u32
+gf100_fb_vidmem_probe_fbp(struct nvkm_fb *fb, int fbp, int *pltcs)
+{
+	u32 fbpao = nvkm_rd32(fb->subdev.device, 0x022554);
+
+	return fb->func->vidmem.probe_fbp_amount(fb, fbpao, fbp, pltcs);
+}
+
+u64
+gf100_fb_vidmem_size(struct nvkm_fb *fb, u64 *plower, u64 *pubase, u64 *pusize)
+{
+	struct nvkm_subdev *subdev = &fb->subdev;
+	struct nvkm_device *device = subdev->device;
+	u32 fbps = nvkm_rd32(device, 0x022438);
+	u64 total = 0, lcomm = ~0;
+	int fbp, ltcs, ltcn = 0;
+
+	nvkm_debug(subdev, "%d FBP(s)\n", fbps);
+	for (fbp = 0; fbp < fbps; fbp++) {
+		u32 size = fb->func->vidmem.probe_fbp(fb, fbp, &ltcs);
+		if (size) {
+			nvkm_debug(subdev, "FBP %d: %4d MiB, %d LTC(s)\n", fbp, size, ltcs);
+			lcomm  = min(lcomm, (u64)(size / ltcs) << 20);
+			total += (u64)size << 20;
+			ltcn  += ltcs;
+		} else {
+			nvkm_debug(subdev, "FBP %d: disabled\n", fbp);
+		}
+	}
+
+	if (plower) {
+		*plower = lcomm * ltcn;
+		*pubase = lcomm + fb->func->vidmem.upper;
+		*pusize = total - *plower;
+
+		nvkm_debug(subdev, "Lower: %4lld MiB @ %010llx\n", *plower >> 20, 0ULL);
+		nvkm_debug(subdev, "Upper: %4lld MiB @ %010llx\n", *pusize >> 20, *pubase);
+		nvkm_debug(subdev, "Total: %4lld MiB\n", total >> 20);
+	}
+
+	return total;
+}
+
+enum nvkm_ram_type
+gf100_fb_vidmem_type(struct nvkm_fb *fb)
+{
+	return nvkm_fb_bios_memtype(fb->subdev.device->bios);
+}
+
 void
 gf100_fb_intr(struct nvkm_fb *base)
 {
@@ -125,6 +191,12 @@ gf100_fb = {
 	.init_page = gf100_fb_init_page,
 	.intr = gf100_fb_intr,
 	.sysmem.flush_page_init = gf100_fb_sysmem_flush_page_init,
+	.vidmem.type = gf100_fb_vidmem_type,
+	.vidmem.size = gf100_fb_vidmem_size,
+	.vidmem.upper = 0x0200000000ULL,
+	.vidmem.probe_fbp = gf100_fb_vidmem_probe_fbp,
+	.vidmem.probe_fbp_amount = gf100_fb_vidmem_probe_fbp_amount,
+	.vidmem.probe_fbpa_amount = gf100_fb_vidmem_probe_fbpa_amount,
 	.ram_new = gf100_ram_new,
 	.default_bigpage = 17,
 };

@@ -37,6 +37,18 @@ nv41_fb_tile_prog(struct nvkm_fb *fb, int i, struct nvkm_fb_tile *tile)
 	nvkm_wr32(device, 0x100700 + (i * 0x04), tile->zcomp);
 }
 
+enum nvkm_ram_type
+nv41_fb_vidmem_type(struct nvkm_fb *fb)
+{
+	u32 fb474 = nvkm_rd32(fb->subdev.device, 0x100474);
+
+	if (fb474 & 0x00000004) return NVKM_RAM_TYPE_GDDR3;
+	if (fb474 & 0x00000002) return NVKM_RAM_TYPE_DDR2;
+	if (fb474 & 0x00000001) return NVKM_RAM_TYPE_DDR1;
+
+	return NVKM_RAM_TYPE_UNKNOWN;
+}
+
 void
 nv41_fb_init(struct nvkm_fb *fb)
 {
@@ -47,12 +59,14 @@ static const struct nvkm_fb_func
 nv41_fb = {
 	.tags = nv20_fb_tags,
 	.init = nv41_fb_init,
+	.vidmem.type = nv41_fb_vidmem_type,
+	.vidmem.size = nv10_fb_vidmem_size,
 	.tile.regions = 12,
 	.tile.init = nv30_fb_tile_init,
 	.tile.comp = nv40_fb_tile_comp,
 	.tile.fini = nv20_fb_tile_fini,
 	.tile.prog = nv41_fb_tile_prog,
-	.ram_new = nv41_ram_new,
+	.ram_new = nv40_ram_new,
 };
 
 int

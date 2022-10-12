@@ -44,6 +44,12 @@ gp100_fb_init_remapper(struct nvkm_fb *fb)
 	nvkm_mask(device, 0x100c14, 0x00040000, 0x00000000);
 }
 
+u32
+gp100_fb_vidmem_probe_fbpa_amount(struct nvkm_device *device, int fbpa)
+{
+	return nvkm_rd32(device, 0x90020c + (fbpa * 0x4000));
+}
+
 static const struct nvkm_fb_func
 gp100_fb = {
 	.dtor = gf100_fb_dtor,
@@ -53,6 +59,12 @@ gp100_fb = {
 	.init_page = gm200_fb_init_page,
 	.init_unkn = gp100_fb_init_unkn,
 	.sysmem.flush_page_init = gf100_fb_sysmem_flush_page_init,
+	.vidmem.type = gf100_fb_vidmem_type,
+	.vidmem.size = gf100_fb_vidmem_size,
+	.vidmem.upper = 0x1000000000ULL,
+	.vidmem.probe_fbp = gm107_fb_vidmem_probe_fbp,
+	.vidmem.probe_fbp_amount = gm200_fb_vidmem_probe_fbp_amount,
+	.vidmem.probe_fbpa_amount = gp100_fb_vidmem_probe_fbpa_amount,
 	.ram_new = gp100_ram_new,
 };
 

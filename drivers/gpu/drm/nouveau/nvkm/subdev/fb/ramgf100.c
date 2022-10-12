@@ -462,68 +462,18 @@ gf100_ram_init(struct nvkm_ram *base)
 	return 0;
 }
 
-u32
-gf100_ram_probe_fbpa_amount(struct nvkm_device *device, int fbpa)
-{
-	return nvkm_rd32(device, 0x11020c + (fbpa * 0x1000));
-}
-
-u32
-gf100_ram_probe_fbp_amount(const struct nvkm_ram_func *func, u32 fbpao,
-			   struct nvkm_device *device, int fbp, int *pltcs)
-{
-	if (!(fbpao & BIT(fbp))) {
-		*pltcs = 1;
-		return func->probe_fbpa_amount(device, fbp);
-	}
-	return 0;
-}
-
-u32
-gf100_ram_probe_fbp(const struct nvkm_ram_func *func,
-		    struct nvkm_device *device, int fbp, int *pltcs)
-{
-	u32 fbpao = nvkm_rd32(device, 0x022554);
-	return func->probe_fbp_amount(func, fbpao, device, fbp, pltcs);
-}
-
 int
 gf100_ram_ctor(const struct nvkm_ram_func *func, struct nvkm_fb *fb,
 	       struct nvkm_ram *ram)
 {
-	struct nvkm_subdev *subdev = &fb->subdev;
-	struct nvkm_device *device = subdev->device;
-	struct nvkm_bios *bios = device->bios;
 	const u32 rsvd_head = ( 256 * 1024); /* vga memory */
 	const u32 rsvd_tail = (1024 * 1024); /* vbios etc */
-	enum nvkm_ram_type type = nvkm_fb_bios_memtype(bios);
-	u32 fbps = nvkm_rd32(device, 0x022438);
-	u64 total = 0, lcomm = ~0, lower, ubase, usize;
-	int ret, fbp, ltcs, ltcn = 0;
+	u64 total, lower, ubase, usize;
+	int ret;
 
-	nvkm_debug(subdev, "%d FBP(s)\n", fbps);
-	for (fbp = 0; fbp < fbps; fbp++) {
-		u32 size = func->probe_fbp(func, device, fbp, &ltcs);
-		if (size) {
-			nvkm_debug(subdev, "FBP %d: %4d MiB, %d LTC(s)\n",
-				   fbp, size, ltcs);
-			lcomm  = min(lcomm, (u64)(size / ltcs) << 20);
-			total += (u64) size << 20;
-			ltcn  += ltcs;
-		} else {
-			nvkm_debug(subdev, "FBP %d: disabled\n", fbp);
-		}
-	}
+	total = fb->func->vidmem.size(fb, &lower, &ubase, &usize);
 
-	lower = lcomm * ltcn;
-	ubase = lcomm + func->upper;
-	usize = total - lower;
-
-	nvkm_debug(subdev, "Lower: %4lld MiB @ %010llx\n", lower >> 20, 0ULL);
-	nvkm_debug(subdev, "Upper: %4lld MiB @ %010llx\n", usize >> 20, ubase);
-	nvkm_debug(subdev, "Total: %4lld MiB\n", total >> 20);
-
-	ret = nvkm_ram_ctor(func, fb, type, total, ram);
+	ret = nvkm_ram_ctor(func, fb, rsvd_head, rsvd_tail, ram);
 	if (ret)
 		return ret;
 
@@ -655,10 +605,6 @@ gf100_ram_new_(const struct nvkm_ram_func *func,
 
 static const struct nvkm_ram_func
 gf100_ram = {
-	.upper = 0x0200000000ULL,
-	.probe_fbp = gf100_ram_probe_fbp,
-	.probe_fbp_amount = gf100_ram_probe_fbp_amount,
-	.probe_fbpa_amount = gf100_ram_probe_fbpa_amount,
 	.init = gf100_ram_init,
 	.calc = gf100_ram_calc,
 	.prog = gf100_ram_prog,

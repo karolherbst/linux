@@ -30,12 +30,14 @@ static const struct nvkm_fb_func
 nv47_fb = {
 	.tags = nv20_fb_tags,
 	.init = nv41_fb_init,
+	.vidmem.type = nv41_fb_vidmem_type,
+	.vidmem.size = nv10_fb_vidmem_size,
 	.tile.regions = 15,
 	.tile.init = nv30_fb_tile_init,
 	.tile.comp = nv40_fb_tile_comp,
 	.tile.fini = nv20_fb_tile_fini,
 	.tile.prog = nv41_fb_tile_prog,
-	.ram_new = nv41_ram_new,
+	.ram_new = nv40_ram_new,
 };
 
 int

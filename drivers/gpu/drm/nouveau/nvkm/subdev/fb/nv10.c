@@ -54,13 +54,31 @@ nv10_fb_tile_prog(struct nvkm_fb *fb, int i, struct nvkm_fb_tile *tile)
 	nvkm_rd32(device, 0x100240 + (i * 0x10));
 }
 
+u64
+nv10_fb_vidmem_size(struct nvkm_fb *fb, u64 *plower, u64 *pubase, u64 *pusize)
+{
+	return nvkm_rd32(fb->subdev.device, 0x10020c) & 0xff000000;
+}
+
+static enum nvkm_ram_type
+nv10_fb_vidmem_type(struct nvkm_fb *fb)
+{
+	u32 cfg0 = nvkm_rd32(fb->subdev.device, 0x100200);
+	if (cfg0 & 0x00000001)
+		return NVKM_RAM_TYPE_DDR1;
+
+	return NVKM_RAM_TYPE_SDRAM;
+}
+
 static const struct nvkm_fb_func
 nv10_fb = {
+	.vidmem.type = nv10_fb_vidmem_type,
+	.vidmem.size = nv10_fb_vidmem_size,
 	.tile.regions = 8,
 	.tile.init = nv10_fb_tile_init,
 	.tile.fini = nv10_fb_tile_fini,
 	.tile.prog = nv10_fb_tile_prog,
-	.ram_new = nv10_ram_new,
+	.ram_new = nv04_ram_new,
 };
 
 int

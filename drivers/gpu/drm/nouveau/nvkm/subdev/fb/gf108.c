@@ -24,6 +24,26 @@
 #include "gf100.h"
 #include "ram.h"
 
+u32
+gf108_fb_vidmem_probe_fbp_amount(struct nvkm_fb *fb, u32 fbpao, int fbp, int *pltcs)
+{
+	struct nvkm_device *device = fb->subdev.device;
+	u32 fbpt  = nvkm_rd32(device, 0x022438);
+	u32 fbpat = nvkm_rd32(device, 0x02243c);
+	u32 fbpas = fbpat / fbpt;
+	u32 fbpa  = fbp * fbpas;
+	u32 size  = 0;
+
+	while (fbpas--) {
+		if (!(fbpao & BIT(fbpa)))
+			size += fb->func->vidmem.probe_fbpa_amount(device, fbpa);
+		fbpa++;
+	}
+
+	*pltcs = 1;
+	return size;
+}
+
 static const struct nvkm_fb_func
 gf108_fb = {
 	.dtor = gf100_fb_dtor,
@@ -31,7 +51,13 @@ gf108_fb = {
 	.init = gf100_fb_init,
 	.init_page = gf100_fb_init_page,
 	.intr = gf100_fb_intr,
-	.ram_new = gf108_ram_new,
+	.vidmem.type = gf100_fb_vidmem_type,
+	.vidmem.size = gf100_fb_vidmem_size,
+	.vidmem.upper = 0x0200000000ULL,
+	.vidmem.probe_fbp = gf100_fb_vidmem_probe_fbp,
+	.vidmem.probe_fbp_amount = gf108_fb_vidmem_probe_fbp_amount,
+	.vidmem.probe_fbpa_amount = gf100_fb_vidmem_probe_fbpa_amount,
+	.ram_new = gf100_ram_new,
 	.default_bigpage = 17,
 };
 
