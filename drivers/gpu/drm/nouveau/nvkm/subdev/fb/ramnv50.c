@@ -499,66 +499,14 @@ nv50_ram_func = {
 	.tidy = nv50_ram_tidy,
 };
 
-static u32
-nv50_fb_vram_rblock(struct nvkm_ram *ram)
-{
-	struct nvkm_subdev *subdev = &ram->fb->subdev;
-	struct nvkm_device *device = subdev->device;
-	int colbits, rowbitsa, rowbitsb, banks;
-	u64 rowsize, predicted;
-	u32 r0, r4, rt, rblock_size;
-
-	r0 = nvkm_rd32(device, 0x100200);
-	r4 = nvkm_rd32(device, 0x100204);
-	rt = nvkm_rd32(device, 0x100250);
-	nvkm_debug(subdev, "memcfg %08x %08x %08x %08x\n",
-		   r0, r4, rt, nvkm_rd32(device, 0x001540));
-
-	colbits  =  (r4 & 0x0000f000) >> 12;
-	rowbitsa = ((r4 & 0x000f0000) >> 16) + 8;
-	rowbitsb = ((r4 & 0x00f00000) >> 20) + 8;
-	banks    = 1 << (((r4 & 0x03000000) >> 24) + 2);
-
-	rowsize = ram->parts * banks * (1 << colbits) * 8;
-	predicted = rowsize << rowbitsa;
-	if (r0 & 0x00000004)
-		predicted += rowsize << rowbitsb;
-
-	if (predicted != ram->size) {
-		nvkm_warn(subdev, "memory controller reports %d MiB VRAM\n",
-			  (u32)(ram->size >> 20));
-	}
-
-	rblock_size = rowsize;
-	if (rt & 1)
-		rblock_size *= 3;
-
-	nvkm_debug(subdev, "rblock %d bytes\n", rblock_size);
-	return rblock_size;
-}
-
 int
 nv50_ram_ctor(const struct nvkm_ram_func *func,
 	      struct nvkm_fb *fb, struct nvkm_ram *ram)
 {
-	struct nvkm_device *device = fb->subdev.device;
 	const u32 rsvd_head = ( 256 * 1024); /* vga memory */
 	const u32 rsvd_tail = (1024 * 1024); /* vbios etc */
-	int ret;
 
-	ret = nvkm_ram_ctor(func, fb, rsvd_head, rsvd_tail, ram);
-	if (ret)
-		return ret;
-
-	ram->part_mask = (nvkm_rd32(device, 0x001540) & 0x00ff0000) >> 16;
-	ram->parts = hweight8(ram->part_mask);
-	ram->ranks = (nvkm_rd32(device, 0x100200) & 0x4) ? 2 : 1;
-	nvkm_mm_fini(&ram->vram);
-
-	return nvkm_mm_init(&ram->vram, NVKM_RAM_MM_NORMAL,
-			    rsvd_head >> NVKM_RAM_MM_SHIFT,
-			    (ram->size - rsvd_head - rsvd_tail) >> NVKM_RAM_MM_SHIFT,
-			    nv50_fb_vram_rblock(ram) >> NVKM_RAM_MM_SHIFT);
+	return nvkm_ram_ctor(func, fb, rsvd_head, rsvd_tail, ram);
 }
 
 int

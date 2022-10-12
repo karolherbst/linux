@@ -24,9 +24,11 @@
 #define mcp77_ram(p) container_of((p), struct mcp77_ram, base)
 #include "ram.h"
 
+#include <core/memory.h>
+
 struct mcp77_ram {
 	struct nvkm_ram base;
-	u64 poller_base;
+	struct nvkm_memory *poller;
 };
 
 static int
@@ -34,9 +36,10 @@ mcp77_ram_init(struct nvkm_ram *base)
 {
 	struct mcp77_ram *ram = mcp77_ram(base);
 	struct nvkm_device *device = ram->base.fb->subdev.device;
-	u32 dniso  = ((ram->base.size - (ram->poller_base + 0x00)) >> 5) - 1;
-	u32 hostnb = ((ram->base.size - (ram->poller_base + 0x20)) >> 5) - 1;
-	u32 flush  = ((ram->base.size - (ram->poller_base + 0x40)) >> 5) - 1;
+	u32 poller_base = nvkm_memory_addr(ram->poller);
+	u32 dniso  = ((ram->base.size - (poller_base + 0x00)) >> 5) - 1;
+	u32 hostnb = ((ram->base.size - (poller_base + 0x20)) >> 5) - 1;
+	u32 flush  = ((ram->base.size - (poller_base + 0x40)) >> 5) - 1;
 
 	/* Enable NISO poller for various clients and set their associated
 	 * read address, only for MCP77/78 and MCP79/7A. (fd#27501)
@@ -50,17 +53,24 @@ mcp77_ram_init(struct nvkm_ram *base)
 	return 0;
 }
 
+static void *
+mcp77_ram_dtor(struct nvkm_ram *base)
+{
+	struct mcp77_ram *ram = mcp77_ram(base);
+
+	nvkm_memory_unref(&ram->poller);
+	return ram;
+}
+
 static const struct nvkm_ram_func
 mcp77_ram_func = {
+	.dtor = mcp77_ram_dtor,
 	.init = mcp77_ram_init,
 };
 
 int
 mcp77_ram_new(struct nvkm_fb *fb, struct nvkm_ram **pram)
 {
-	u32 rsvd_head = ( 256 * 1024); /* vga memory */
-	u32 rsvd_tail = (1024 * 1024) + 0x1000; /* vbios etc + poller mem */
-	u64 base, size = fb->func->vidmem.size(fb, &base, NULL, NULL);
 	struct mcp77_ram *ram;
 	int ret;
 
@@ -68,16 +78,10 @@ mcp77_ram_new(struct nvkm_fb *fb, struct nvkm_ram **pram)
 		return -ENOMEM;
 	*pram = &ram->base;
 
-	ret = nvkm_ram_ctor(&mcp77_ram_func, fb, rsvd_head, rsvd_tail, &ram->base);
+	ret = nv50_ram_ctor(&mcp77_ram_func, fb, &ram->base);
 	if (ret)
 		return ret;
 
-	ram->poller_base = size - rsvd_tail;
-	ram->base.stolen = base;
-	nvkm_mm_fini(&ram->base.vram);
-
-	return nvkm_mm_init(&ram->base.vram, NVKM_RAM_MM_NORMAL,
-			    rsvd_head >> NVKM_RAM_MM_SHIFT,
-			    (size - rsvd_head - rsvd_tail) >>
-			    NVKM_RAM_MM_SHIFT, 1);
+	return nvkm_ram_get(fb->subdev.device, NVKM_RAM_MM_NORMAL, 0x01, 0, 0x1000, true, true,
+			    &ram->poller);
 }

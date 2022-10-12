@@ -463,57 +463,6 @@ gf100_ram_init(struct nvkm_ram *base)
 }
 
 int
-gf100_ram_ctor(const struct nvkm_ram_func *func, struct nvkm_fb *fb,
-	       struct nvkm_ram *ram)
-{
-	const u32 rsvd_head = ( 256 * 1024); /* vga memory */
-	const u32 rsvd_tail = (1024 * 1024); /* vbios etc */
-	u64 total, lower, ubase, usize;
-	int ret;
-
-	total = fb->func->vidmem.size(fb, &lower, &ubase, &usize);
-
-	ret = nvkm_ram_ctor(func, fb, rsvd_head, rsvd_tail, ram);
-	if (ret)
-		return ret;
-
-	nvkm_mm_fini(&ram->vram);
-
-	/* Some GPUs are in what's known as a "mixed memory" configuration.
-	 *
-	 * This is either where some FBPs have more memory than the others,
-	 * or where LTCs have been disabled on a FBP.
-	 */
-	if (lower != total) {
-		/* The common memory amount is addressed normally. */
-		ret = nvkm_mm_init(&ram->vram, NVKM_RAM_MM_NORMAL,
-				   rsvd_head >> NVKM_RAM_MM_SHIFT,
-				   (lower - rsvd_head) >> NVKM_RAM_MM_SHIFT, 1);
-		if (ret)
-			return ret;
-
-		/* And the rest is much higher in the physical address
-		 * space, and may not be usable for certain operations.
-		 */
-		ret = nvkm_mm_init(&ram->vram, NVKM_RAM_MM_MIXED,
-				   ubase >> NVKM_RAM_MM_SHIFT,
-				   (usize - rsvd_tail) >> NVKM_RAM_MM_SHIFT, 1);
-		if (ret)
-			return ret;
-	} else {
-		/* GPUs without mixed-memory are a lot nicer... */
-		ret = nvkm_mm_init(&ram->vram, NVKM_RAM_MM_NORMAL,
-				   rsvd_head >> NVKM_RAM_MM_SHIFT,
-				   (total - rsvd_head - rsvd_tail) >>
-				   NVKM_RAM_MM_SHIFT, 1);
-		if (ret)
-			return ret;
-	}
-
-	return 0;
-}
-
-int
 gf100_ram_new_(const struct nvkm_ram_func *func,
 	       struct nvkm_fb *fb, struct nvkm_ram **pram)
 {
@@ -526,7 +475,7 @@ gf100_ram_new_(const struct nvkm_ram_func *func,
 		return -ENOMEM;
 	*pram = &ram->base;
 
-	ret = gf100_ram_ctor(func, fb, &ram->base);
+	ret = nv50_ram_ctor(func, fb, &ram->base);
 	if (ret)
 		return ret;
 

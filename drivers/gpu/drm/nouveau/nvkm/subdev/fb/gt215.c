@@ -28,6 +28,7 @@ static const struct nv50_fb_func
 gt215_fb = {
 	.vidmem.type = nv50_fb_vidmem_type,
 	.vidmem.size = nv50_fb_vidmem_size,
+	.vidmem.rblock = nv50_fb_vidmem_rblock,
 	.ram_new = gt215_ram_new,
 	.tags = nv20_fb_tags,
 	.trap = 0x000d0fff,

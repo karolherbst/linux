@@ -23,6 +23,7 @@ struct nvkm_fb_func {
 	struct nvkm_fb_func_vidmem {
 		enum nvkm_ram_type (*type)(struct nvkm_fb *);
 		u64 (*size)(struct nvkm_fb *, u64 *lower, u64 *ubase, u64 *usize);
+		u32 (*rblock)(struct nvkm_fb *);
 		u64 upper;
 		u32 (*probe_fbp)(struct nvkm_fb *, int fbp, int *pltcs);
 		u32 (*probe_fbp_amount)(struct nvkm_fb *, u32 fbpao, int fbp, int *pltcs);
@@ -89,6 +90,7 @@ void nv46_fb_tile_init(struct nvkm_fb *, int i, u32 addr, u32 size,
 
 enum nvkm_ram_type nv50_fb_vidmem_type(struct nvkm_fb *);
 u64 nv50_fb_vidmem_size(struct nvkm_fb *, u64 *, u64 *, u64 *);
+u32 nv50_fb_vidmem_rblock(struct nvkm_fb *);
 
 int gf100_fb_oneinit(struct nvkm_fb *);
 int gf100_fb_init_page(struct nvkm_fb *);

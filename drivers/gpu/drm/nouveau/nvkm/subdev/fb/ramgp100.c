@@ -84,6 +84,6 @@ gp100_ram_new(struct nvkm_fb *fb, struct nvkm_ram **pram)
 	if (!(ram = *pram = kzalloc(sizeof(*ram), GFP_KERNEL)))
 		return -ENOMEM;
 
-	return gf100_ram_ctor(&gp100_ram, fb, ram);
+	return nv50_ram_ctor(&gp100_ram, fb, ram);
 
 }

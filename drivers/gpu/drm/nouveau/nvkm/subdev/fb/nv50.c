@@ -211,6 +211,48 @@ nv50_fb_tags(struct nvkm_fb *base)
 	return 0;
 }
 
+u32
+nv50_fb_vidmem_rblock(struct nvkm_fb *fb)
+{
+	struct nvkm_subdev *subdev = &fb->subdev;
+	struct nvkm_device *device = subdev->device;
+	int colbits, rowbitsa, rowbitsb, banks;
+	u64 rowsize, predicted;
+	u32 r0, r4, rt, rblock_size;
+
+	fb->ram->part_mask = (nvkm_rd32(device, 0x001540) & 0x00ff0000) >> 16;
+	fb->ram->parts = hweight8(fb->ram->part_mask);
+	fb->ram->ranks = (nvkm_rd32(device, 0x100200) & 0x4) ? 2 : 1;
+
+	r0 = nvkm_rd32(device, 0x100200);
+	r4 = nvkm_rd32(device, 0x100204);
+	rt = nvkm_rd32(device, 0x100250);
+	nvkm_debug(subdev, "memcfg %08x %08x %08x %08x\n",
+		   r0, r4, rt, nvkm_rd32(device, 0x001540));
+
+	colbits  =  (r4 & 0x0000f000) >> 12;
+	rowbitsa = ((r4 & 0x000f0000) >> 16) + 8;
+	rowbitsb = ((r4 & 0x00f00000) >> 20) + 8;
+	banks    = 1 << (((r4 & 0x03000000) >> 24) + 2);
+
+	rowsize = fb->ram->parts * banks * (1 << colbits) * 8;
+	predicted = rowsize << rowbitsa;
+	if (r0 & 0x00000004)
+		predicted += rowsize << rowbitsb;
+
+	if (predicted != fb->ram->size) {
+		nvkm_warn(subdev, "memory controller reports %d MiB VRAM\n",
+			  (u32)(fb->ram->size >> 20));
+	}
+
+	rblock_size = rowsize;
+	if (rt & 1)
+		rblock_size *= 3;
+
+	nvkm_debug(subdev, "rblock %d bytes\n", rblock_size);
+	return rblock_size;
+}
+
 u64
 nv50_fb_vidmem_size(struct nvkm_fb *fb, u64 *plower, u64 *pubase, u64 *pusize)
 {
@@ -268,6 +310,7 @@ nv50_fb_ = {
 	.sysmem.flush_page_init = nv50_fb_sysmem_flush_page_init,
 	.vidmem.type = nv50_fb_vidmem_type,
 	.vidmem.size = nv50_fb_vidmem_size,
+	.vidmem.rblock = nv50_fb_vidmem_rblock,
 	.ram_new = nv50_fb_ram_new,
 };
 

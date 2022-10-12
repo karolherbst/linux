@@ -15,8 +15,6 @@ int  nv50_ram_ctor(const struct nvkm_ram_func *, struct nvkm_fb *,
 
 int gf100_ram_new_(const struct nvkm_ram_func *, struct nvkm_fb *,
 		   struct nvkm_ram **);
-int  gf100_ram_ctor(const struct nvkm_ram_func *, struct nvkm_fb *,
-		    struct nvkm_ram *);
 int gf100_ram_init(struct nvkm_ram *);
 int gf100_ram_calc(struct nvkm_ram *, u32);
 int gf100_ram_prog(struct nvkm_ram *);

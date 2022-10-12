@@ -1534,7 +1534,7 @@ gk104_ram_new_(const struct nvkm_ram_func *func, struct nvkm_fb *fb,
 		return -ENOMEM;
 	*pram = &ram->base;
 
-	ret = gf100_ram_ctor(func, fb, &ram->base);
+	ret = nv50_ram_ctor(func, fb, &ram->base);
 	if (ret)
 		return ret;
 

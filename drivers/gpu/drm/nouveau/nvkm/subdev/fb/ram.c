@@ -198,22 +198,43 @@ nvkm_ram_ctor(const struct nvkm_ram_func *func, struct nvkm_fb *fb, u32 rsvd_hea
 		[NVKM_RAM_TYPE_HBM2   ] = "HBM2",
 	};
 	struct nvkm_subdev *subdev = &fb->subdev;
+	u64 lower = 0, ubase, usize;
 	int ret;
 
 	ram->func = func;
 	ram->fb = fb;
 	ram->type = fb->func->vidmem.type(fb);
-	ram->size = fb->func->vidmem.size(fb, NULL, NULL, NULL);
+	ram->size = fb->func->vidmem.size(fb, &lower, &ubase, &usize);
+	ram->stolen = (ram->type == NVKM_RAM_TYPE_STOLEN) ? lower : 0;
 	mutex_init(&ram->mutex);
 
 	nvkm_info(subdev, "%d MiB %s\n", (int)(ram->size >> 20), name[ram->type]);
 
-	if (!nvkm_mm_initialised(&ram->vram)) {
-		ret = nvkm_mm_init(&ram->vram, NVKM_RAM_MM_NORMAL, rsvd_head >> NVKM_RAM_MM_SHIFT,
-				   (ram->size - rsvd_head - rsvd_tail) >> NVKM_RAM_MM_SHIFT,
-				   1);
+	/* Some GPUs are in what's known as a "mixed memory" configuration.
+	 *
+	 * This is either where some FBPs have more memory than the others,
+	 * or where LTCs have been disabled on a FBP.
+	 */
+	if (lower && lower != ram->size && !ram->stolen) {
+		/* The common memory amount is addressed normally. */
+		ret = nvkm_mm_init(&ram->vram, NVKM_RAM_MM_NORMAL,
+				   rsvd_head >> NVKM_RAM_MM_SHIFT, lower >> NVKM_RAM_MM_SHIFT, 1);
 		if (ret)
 			return ret;
+
+		/* And the rest is much higher in the physical address
+		 * space, and may not be usable for certain operations.
+		 */
+		ret = nvkm_mm_init(&ram->vram, NVKM_RAM_MM_MIXED, ubase >> NVKM_RAM_MM_SHIFT,
+				   (usize - rsvd_tail) >> NVKM_RAM_MM_SHIFT, 1);
+		if (ret)
+			return ret;
+	} else {
+		/* GPUs without mixed-memory are a lot nicer... */
+		ret = nvkm_mm_init(&ram->vram, NVKM_RAM_MM_NORMAL, rsvd_head >> NVKM_RAM_MM_SHIFT,
+				   (ram->size - rsvd_head - rsvd_tail) >> NVKM_RAM_MM_SHIFT,
+				   fb->func->vidmem.rblock ?
+				   fb->func->vidmem.rblock(fb) >> NVKM_RAM_MM_SHIFT : 1);
 	}
 
 	return 0;
