@@ -299,7 +299,7 @@ nv50_backlight_init(struct nouveau_backlight *bl,
 	    nv_conn->base.status != connector_status_connected)
 		return -ENODEV;
 
-	if (nv_conn->type == DCB_CONNECTOR_eDP) {
+	if (nv_conn->conn.info.type == NVIF_CONN_EDP) {
 		int ret;
 		u16 current_level;
 		u8 edp_dpcd[EDP_DISPLAY_CTL_CAP_SIZE];

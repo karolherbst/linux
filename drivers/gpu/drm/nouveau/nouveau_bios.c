@@ -1350,27 +1350,6 @@ olddcb_outp_foreach(struct drm_device *dev, void *data,
 	return 0;
 }
 
-u8 *
-olddcb_conntab(struct drm_device *dev)
-{
-	u8 *dcb = olddcb_table(dev);
-	if (dcb && dcb[0] >= 0x30 && dcb[1] >= 0x16) {
-		u8 *conntab = ROMPTR(dev, dcb[0x14]);
-		if (conntab && conntab[0] >= 0x30 && conntab[0] <= 0x40)
-			return conntab;
-	}
-	return NULL;
-}
-
-u8 *
-olddcb_conn(struct drm_device *dev, u8 idx)
-{
-	u8 *conntab = olddcb_conntab(dev);
-	if (conntab && idx < conntab[2])
-		return conntab + conntab[1] + (idx * conntab[3]);
-	return NULL;
-}
-
 static struct dcb_output *new_dcb_entry(struct dcb_table *dcb)
 {
 	struct dcb_output *entry = &dcb->entry[dcb->entries];
@@ -1853,15 +1832,6 @@ dcb_fake_connectors(struct nvbios *bios)
 			dcbt->entry[i].connector = map[i2c] - 1;
 		}
 	}
-
-	/* if we created more than one connector, destroy the connector
-	 * table - just in case it has random, rather than stub, entries.
-	 */
-	if (i > 1) {
-		u8 *conntab = olddcb_conntab(bios->dev);
-		if (conntab)
-			conntab[0] = 0x00;
-	}
 }
 
 static int
@@ -1869,8 +1839,7 @@ parse_dcb_table(struct drm_device *dev, struct nvbios *bios)
 {
 	struct nouveau_drm *drm = nouveau_drm(dev);
 	struct dcb_table *dcb = &bios->dcb;
-	u8 *dcbt, *conn;
-	int idx;
+	u8 *dcbt;
 
 	dcbt = olddcb_table(dev);
 	if (!dcbt) {
@@ -1895,18 +1864,6 @@ parse_dcb_table(struct drm_device *dev, struct nvbios *bios)
 	if (dcb->version < 0x21)
 		merge_like_dcb_entries(dev, dcb);
 
-	/* dump connector table entries to log, if any exist */
-	idx = -1;
-	while ((conn = olddcb_conn(dev, ++idx))) {
-		if (conn[0] != 0xff) {
-			if (olddcb_conntab(dev)[3] < 4)
-				NV_INFO(drm, "DCB conn %02d: %04x\n",
-					idx, ROM16(conn[0]));
-			else
-				NV_INFO(drm, "DCB conn %02d: %08x\n",
-					idx, ROM32(conn[0]));
-		}
-	}
 	dcb_fake_connectors(bios);
 	return 0;
 }

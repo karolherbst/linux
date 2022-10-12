@@ -1589,7 +1589,7 @@ nv50_sor_atomic_enable(struct drm_encoder *encoder, struct drm_atomic_state *sta
 			lvds_dual = bios->fp.dual_link;
 			lvds_8bpc = bios->fp.if_is_24bit;
 		} else {
-			if (nv_connector->type == DCB_CONNECTOR_LVDS_SPWG) {
+			if (nv_connector->conn.info.type == NVIF_CONN_LVDS_SPWG) {
 				if (((u8 *)nv_connector->edid)[121] == 2)
 					lvds_dual = true;
 			} else
@@ -1733,7 +1733,7 @@ nv50_sor_create(struct drm_connector *connector, struct dcb_output *dcbe)
 			nv_encoder->aux = aux;
 		}
 
-		if (nv_connector->type != DCB_CONNECTOR_eDP &&
+		if (nv_connector->conn.info.type != NVIF_CONN_EDP &&
 		    nv50_has_mst(drm)) {
 			ret = nv50_mstm_new(nv_encoder, &nv_connector->aux,
 					    16, nv_connector->base.base.id,
@@ -2644,7 +2644,7 @@ nv50_display_create(struct drm_device *dev)
 
 	/* create encoder/connector objects based on VBIOS DCB table */
 	for (i = 0, dcbe = &dcb->entry[0]; i < dcb->entries; i++, dcbe++) {
-		connector = nouveau_connector_create(dev, dcbe);
+		connector = nouveau_connector_create(dev, dcbe->connector);
 		if (IS_ERR(connector))
 			continue;
 
