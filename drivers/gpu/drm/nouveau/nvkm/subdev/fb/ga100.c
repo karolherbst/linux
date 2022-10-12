@@ -31,11 +31,7 @@ ga100_fb = {
 	.init_unkn = gp100_fb_init_unkn,
 	.sysmem.flush_page_init = gf100_fb_sysmem_flush_page_init,
 	.vidmem.type = gf100_fb_vidmem_type,
-	.vidmem.size = gf100_fb_vidmem_size,
-	.vidmem.upper = 0x1000000000ULL,
-	.vidmem.probe_fbp = gm107_fb_vidmem_probe_fbp,
-	.vidmem.probe_fbp_amount = gm200_fb_vidmem_probe_fbp_amount,
-	.vidmem.probe_fbpa_amount = gp100_fb_vidmem_probe_fbpa_amount,
+	.vidmem.size = gp102_fb_vidmem_size,
 	.ram_new = gp100_ram_new,
 	.default_bigpage = 16,
 };

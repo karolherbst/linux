@@ -51,6 +51,20 @@ gp102_fb_vpr_scrub_required(struct nvkm_fb *fb)
 	return (nvkm_rd32(device, 0x100cd0) & 0x00000010) != 0;
 }
 
+u64
+gp102_fb_vidmem_size(struct nvkm_fb *fb, u64 *plower, u64 *pbase, u64 *psize)
+{
+	const u32 data = nvkm_rd32(fb->subdev.device, 0x100ce0);
+	const u32 lmag = (data & 0x000003f0) >> 4;
+	const u32 lsca = (data & 0x0000000f);
+	const u64 size = (u64)lmag << (lsca + 20);
+
+	if (data & 0x40000000)
+		return size / 16 * 15;
+
+	return size;
+}
+
 static const struct nvkm_fb_func
 gp102_fb = {
 	.dtor = gf100_fb_dtor,
@@ -60,11 +74,7 @@ gp102_fb = {
 	.init_page = gm200_fb_init_page,
 	.sysmem.flush_page_init = gf100_fb_sysmem_flush_page_init,
 	.vidmem.type = gf100_fb_vidmem_type,
-	.vidmem.size = gf100_fb_vidmem_size,
-	.vidmem.upper = 0x1000000000ULL,
-	.vidmem.probe_fbp = gm107_fb_vidmem_probe_fbp,
-	.vidmem.probe_fbp_amount = gm200_fb_vidmem_probe_fbp_amount,
-	.vidmem.probe_fbpa_amount = gp100_fb_vidmem_probe_fbpa_amount,
+	.vidmem.size = gp102_fb_vidmem_size,
 	.vpr.scrub_required = gp102_fb_vpr_scrub_required,
 	.vpr.scrub = gp102_fb_vpr_scrub,
 	.ram_new = gp100_ram_new,

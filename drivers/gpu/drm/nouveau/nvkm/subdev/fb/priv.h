@@ -113,6 +113,7 @@ void gp100_fb_init_unkn(struct nvkm_fb *);
 
 int gp102_fb_new_(const struct nvkm_fb_func *, struct nvkm_device *, enum nvkm_subdev_type, int,
 		  struct nvkm_fb **);
+u64 gp102_fb_vidmem_size(struct nvkm_fb *, u64 *, u64 *, u64 *);
 bool gp102_fb_vpr_scrub_required(struct nvkm_fb *);
 int gp102_fb_vpr_scrub(struct nvkm_fb *);
 
