@@ -94,6 +94,7 @@ struct nouveau_encoder {
 	void (*enc_restore)(struct drm_encoder *encoder);
 	void (*update)(struct nouveau_encoder *, u8 head,
 		       struct nv50_head_atom *, u8 proto, u8 depth);
+	void (*update_post)(struct nouveau_encoder *, struct drm_atomic_state *);
 };
 
 struct nv50_mstm {

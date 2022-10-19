@@ -797,8 +797,6 @@ nv50_hdmi_enable(struct drm_encoder *encoder, struct nouveau_crtc *nv_crtc,
 		size = 0;
 
 	nvif_outp_infoframe(&nv_encoder->outp, NVIF_OUTP_INFOFRAME_V0_VSI, &args.infoframe, size);
-
-	nv50_audio_enable(encoder, nv_crtc, nv_connector, state, mode);
 }
 
 /******************************************************************************
@@ -1472,6 +1470,18 @@ nv50_mstm_new(struct nouveau_encoder *outp, struct drm_dp_aux *aux, int aux_max,
  * SOR
  *****************************************************************************/
 static void
+nv50_sor_update_post(struct nouveau_encoder *nv_encoder, struct drm_atomic_state *state)
+{
+	struct nouveau_connector *nv_connector = nv50_outp_get_new_connector(state, nv_encoder);
+	struct nv50_head *head = nv50_head(&nv50_outp_get_new_crtc(state, nv_encoder)->base);
+	struct nv50_head_atom *asyh =
+		nv50_head_atom(drm_atomic_get_new_crtc_state(state, &head->base.base));
+	struct drm_display_mode *mode = &asyh->state.adjusted_mode;
+
+	nv50_audio_enable(&nv_encoder->base.base, &head->base, nv_connector, state, mode);
+}
+
+static void
 nv50_sor_update(struct nouveau_encoder *nv_encoder, u8 head,
 		struct nv50_head_atom *asyh, u8 proto, u8 depth)
 {
@@ -1628,8 +1638,6 @@ nv50_sor_atomic_enable(struct drm_encoder *encoder, struct drm_atomic_state *sta
 		else
 			proto = NV887D_SOR_SET_CONTROL_PROTOCOL_DP_B;
 
-		nv50_audio_enable(encoder, &head->base, nv_connector, state, mode);
-
 #ifdef CONFIG_DRM_NOUVEAU_BACKLIGHT
 		backlight = nv_connector->backlight;
 		if (backlight && backlight->uses_dpcd)
@@ -1701,6 +1709,7 @@ nv50_sor_create(struct drm_connector *connector, struct nouveau_encoder *nv_enco
 	}
 
 	nv_encoder->update = nv50_sor_update;
+	nv_encoder->update_post = nv50_sor_update_post;
 
 	encoder = to_drm_encoder(nv_encoder);
 	encoder->possible_crtcs = nv_encoder->outp.info.heads;
@@ -2096,7 +2105,7 @@ nv50_disp_atomic_commit_tail(struct drm_atomic_state *state)
 	nv50_crc_atomic_init_notifier_contexts(state);
 
 	/* Update output path(s). */
-	list_for_each_entry_safe(outp, outt, &atom->outp, head) {
+	list_for_each_entry(outp, &atom->outp, head) {
 		const struct drm_encoder_helper_funcs *help;
 		struct drm_encoder *encoder;
 
@@ -2110,9 +2119,6 @@ nv50_disp_atomic_commit_tail(struct drm_atomic_state *state)
 			help->atomic_enable(encoder, state);
 			interlock[NV50_DISP_INTERLOCK_CORE] = 1;
 		}
-
-		list_del(&outp->head);
-		kfree(outp);
 	}
 
 	/* Update head(s). */
@@ -2233,6 +2239,21 @@ nv50_disp_atomic_commit_tail(struct drm_atomic_state *state)
 			if (new_crtc_state->active)
 				drm_crtc_vblank_put(crtc);
 		}
+	}
+
+	/* Perform post-update operations (enabling audio, etc) on outputs. */
+	list_for_each_entry_safe(outp, outt, &atom->outp, head) {
+		if (outp->set.mask) {
+			if (outp->encoder->encoder_type != DRM_MODE_ENCODER_DPMST) {
+				struct nouveau_encoder *nv_encoder = nouveau_encoder(outp->encoder);
+
+				if (nv_encoder->update_post)
+					nv_encoder->update_post(nv_encoder, state);
+			}
+		}
+
+		list_del(&outp->head);
+		kfree(outp);
 	}
 
 	nv50_crc_atomic_start_reporting(state);
