@@ -40,6 +40,32 @@
 #define AMPERE_IED_HACK(disp) ((disp)->engine.subdev.device->card_type >= GA100)
 
 static int
+nvkm_dp_edp_rates(struct nvkm_outp *outp, u8 rates, u8 *rate)
+{
+	int i, j, k;
+
+	outp->dp.rates = 0;
+
+	for (i = 0; i < rates; i++) {
+		u32 this_rate = rate[i] * 27000;
+
+		for (j = 0; j < outp->dp.rates; j++) {
+			if (this_rate > outp->dp.rate[j].rate) {
+				for (k = outp->dp.rates; k > j; k--)
+					outp->dp.rate[k] = outp->dp.rate[k - 1];
+				break;
+			}
+		}
+
+		outp->dp.rate[j].dpcd = i;
+		outp->dp.rate[j].rate = this_rate;
+		outp->dp.rates++;
+	}
+
+	return 0;
+}
+
+static int
 nvkm_dp_mst_id_put(struct nvkm_outp *outp, u32 id)
 {
 	return 0;
@@ -626,48 +652,6 @@ done:
 	return ret;
 }
 
-static bool
-nvkm_dp_enable_supported_link_rates(struct nvkm_outp *outp)
-{
-	u8 sink_rates[DPCD_RC10_SUPPORTED_LINK_RATES__SIZE];
-	int i, j, k;
-
-	if (outp->conn->info.type != DCB_CONNECTOR_eDP ||
-	    outp->dp.dpcd[DPCD_RC00_DPCD_REV] < 0x13 ||
-	    nvkm_rdaux(outp->dp.aux, DPCD_RC10_SUPPORTED_LINK_RATES(0),
-		       sink_rates, sizeof(sink_rates)))
-		return false;
-
-	for (i = 0; i < ARRAY_SIZE(sink_rates); i += 2) {
-		const u32 rate = ((sink_rates[i + 1] << 8) | sink_rates[i]) * 200 / 10;
-
-		if (!rate || WARN_ON(outp->dp.rates == ARRAY_SIZE(outp->dp.rate)))
-			break;
-
-		if (rate > outp->info.dpconf.link_bw * 27000) {
-			OUTP_DBG(outp, "rate %d !outp", rate);
-			continue;
-		}
-
-		for (j = 0; j < outp->dp.rates; j++) {
-			if (rate > outp->dp.rate[j].rate) {
-				for (k = outp->dp.rates; k > j; k--)
-					outp->dp.rate[k] = outp->dp.rate[k - 1];
-				break;
-			}
-		}
-
-		outp->dp.rate[j].dpcd = i / 2;
-		outp->dp.rate[j].rate = rate;
-		outp->dp.rates++;
-	}
-
-	for (i = 0; i < outp->dp.rates; i++)
-		OUTP_DBG(outp, "link_rate[%d] = %d", outp->dp.rate[i].dpcd, outp->dp.rate[i].rate);
-
-	return outp->dp.rates != 0;
-}
-
 void
 nvkm_dp_enable(struct nvkm_outp *outp, bool auxpwr)
 {
@@ -739,18 +723,16 @@ nvkm_dp_enable(struct nvkm_outp *outp, bool auxpwr)
 			if (outp->dp.lttprs && outp->dp.lttpr[1])
 				rate_max = min_t(int, rate_max, outp->dp.lttpr[1]);
 
-			if (!nvkm_dp_enable_supported_link_rates(outp)) {
-				for (rate = rates; *rate; rate++) {
-					if (*rate > rate_max)
-						continue;
+			for (rate = rates; *rate; rate++) {
+				if (*rate > rate_max)
+					continue;
 
-					if (WARN_ON(outp->dp.rates == ARRAY_SIZE(outp->dp.rate)))
-						break;
+				if (WARN_ON(outp->dp.rates == ARRAY_SIZE(outp->dp.rate)))
+					break;
 
-					outp->dp.rate[outp->dp.rates].dpcd = -1;
-					outp->dp.rate[outp->dp.rates].rate = *rate * 27000;
-					outp->dp.rates++;
-				}
+				outp->dp.rate[outp->dp.rates].dpcd = -1;
+				outp->dp.rate[outp->dp.rates].rate = *rate * 27000;
+				outp->dp.rates++;
 			}
 		}
 	} else
@@ -803,6 +785,7 @@ nvkm_dp_func = {
 	.dp.aux_xfer = nvkm_dp_aux_xfer,
 	.dp.mst_id_get = nvkm_dp_mst_id_get,
 	.dp.mst_id_put = nvkm_dp_mst_id_put,
+	.dp.edp_rates = nvkm_dp_edp_rates,
 };
 
 int

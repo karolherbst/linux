@@ -57,6 +57,7 @@ union nvif_outp_args {
 #define NVIF_OUTP_V0_DP_MST_ID_GET   0x54
 #define NVIF_OUTP_V0_DP_MST_ID_PUT   0x55
 #define NVIF_OUTP_V0_DP_MST_VCPI     0x56
+#define NVIF_OUTP_V0_DP_LINK_RATES   0x57
 
 union nvif_outp_detect_args {
 	struct nvif_outp_detect_v0 {
@@ -206,6 +207,15 @@ union nvif_outp_dp_mst_vcpi_args {
 		__u8  num_slots;
 		__u16 pbn;
 		__u16 aligned_pbn;
+	} v0;
+};
+
+union nvif_outp_dp_link_rates_args {
+	struct nvif_outp_dp_link_rates_v0 {
+		__u8  version;
+		__u8  pad01[2];
+		__u8  rates;
+		__u8  rate[8];
 	} v0;
 };
 #endif

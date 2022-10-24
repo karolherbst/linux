@@ -70,6 +70,10 @@ struct nouveau_encoder {
 	union {
 		struct {
 			struct nv50_mstm *mstm;
+
+			u8  rate[8];
+			int rate_nr;
+
 			int link_nr;
 			int link_bw;
 

@@ -57,6 +57,38 @@ nouveau_dp_probe_dpcd(struct nouveau_connector *nv_connector,
 	if (ret < 0)
 		goto out;
 
+	outp->dp.rate_nr = 0;
+
+	if (connector->connector_type == DRM_MODE_CONNECTOR_eDP && dpcd[DP_DPCD_REV] >= 0x13) {
+		__le16 rates[DP_MAX_SUPPORTED_RATES];
+
+		ret = drm_dp_dpcd_read(aux, DP_SUPPORTED_LINK_RATES, rates, sizeof(rates));
+		if (ret == sizeof(rates)) {
+			for (int i = 0; i < ARRAY_SIZE(rates); i++) {
+				int val = le16_to_cpu(rates[i]);
+
+				if (val == 0)
+					break;
+
+				outp->dp.rate[outp->dp.rate_nr++] = ((val * 200) / 10) / 27000;
+			}
+		}
+
+		ret = nvif_outp_dp_link_rates(&outp->outp, outp->dp.rate, outp->dp.rate_nr);
+		if (ret)
+			goto out;
+	}
+
+	if (!outp->dp.rate_nr) {
+		if (dpcd[DP_MAX_LINK_RATE] >= 0x06) outp->dp.rate[outp->dp.rate_nr++] = 0x06;
+		if (dpcd[DP_MAX_LINK_RATE] >= 0x0a) outp->dp.rate[outp->dp.rate_nr++] = 0x0a;
+		if (dpcd[DP_MAX_LINK_RATE] >= 0x14) outp->dp.rate[outp->dp.rate_nr++] = 0x14;
+		if (dpcd[DP_MAX_LINK_RATE] >= 0x1e) outp->dp.rate[outp->dp.rate_nr++] = 0x1e;
+	}
+
+	if (WARN_ON(!outp->dp.rate_nr))
+		goto out;
+
 	ret = drm_dp_read_desc(aux, &outp->dp.desc, drm_dp_is_branch(dpcd));
 	if (ret < 0)
 		goto out;
@@ -106,7 +138,7 @@ nouveau_dp_detect(struct nouveau_connector *nv_connector,
 	struct nv50_mstm *mstm = nv_encoder->dp.mstm;
 	enum drm_connector_status status;
 	u8 *dpcd = nv_encoder->dp.dpcd;
-	int ret = NOUVEAU_DP_NONE;
+	int ret = NOUVEAU_DP_NONE, i;
 
 	/* If we've already read the DPCD on an eDP device, we don't need to
 	 * reread it as it won't change
@@ -146,24 +178,16 @@ nouveau_dp_detect(struct nouveau_connector *nv_connector,
 		goto out;
 	}
 
-	nv_encoder->dp.link_bw = 27000 * dpcd[DP_MAX_LINK_RATE];
-	nv_encoder->dp.link_nr =
-		dpcd[DP_MAX_LANE_COUNT] & DP_MAX_LANE_COUNT_MASK;
+	for (nv_encoder->dp.link_bw = 0, i = 0; i < nv_encoder->dp.rate_nr; i++) {
+		u32 link_bw = nv_encoder->dp.rate[i] * 27000;
 
-	if (connector->connector_type == DRM_MODE_CONNECTOR_eDP && dpcd[DP_DPCD_REV] >= 0x13) {
-		struct drm_dp_aux *aux = &nv_connector->aux;
-		int ret, i;
-		u8 sink_rates[16];
+		if (link_bw > nv_encoder->dp.link_bw)
+			nv_encoder->dp.link_bw = link_bw;
 
-		ret = drm_dp_dpcd_read(aux, DP_SUPPORTED_LINK_RATES, sink_rates, sizeof(sink_rates));
-		if (ret == sizeof(sink_rates)) {
-			for (i = 0; i < ARRAY_SIZE(sink_rates); i += 2) {
-				int val = ((sink_rates[i + 1] << 8) | sink_rates[i]) * 200 / 10;
-				if (val && (i == 0 || val > nv_encoder->dp.link_bw))
-					nv_encoder->dp.link_bw = val;
-			}
-		}
+		NV_DEBUG(drm, "sink rate %d: %d\n", i, link_bw);
 	}
+
+	nv_encoder->dp.link_nr = dpcd[DP_MAX_LANE_COUNT] & DP_MAX_LANE_COUNT_MASK;
 
 	NV_DEBUG(drm, "display: %dx%d dpcd 0x%02x\n",
 		 nv_encoder->dp.link_nr, nv_encoder->dp.link_bw,

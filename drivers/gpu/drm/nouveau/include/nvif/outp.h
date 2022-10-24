@@ -83,6 +83,7 @@ int nvif_outp_dp_mst_id_get(struct nvif_outp *, u32 *id);
 int nvif_outp_dp_mst_id_put(struct nvif_outp *, u32 id);
 int nvif_outp_dp_mst_vcpi(struct nvif_outp *, int head,
 			  u8 start_slot, u8 num_slots, u16 pbn, u16 aligned_pbn);
+int nvif_outp_dp_link_rates(struct nvif_outp *, u8 *rate, int rate_nr);
 int nvif_outp_bl_get(struct nvif_outp *);
 int nvif_outp_bl_set(struct nvif_outp *, int level);
 #endif

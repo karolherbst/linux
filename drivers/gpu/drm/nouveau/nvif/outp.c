@@ -52,6 +52,25 @@ nvif_outp_bl_get(struct nvif_outp *outp)
 	return ret ? ret : args.level;
 }
 
+
+int
+nvif_outp_dp_link_rates(struct nvif_outp *outp, u8 *rate, int rate_nr)
+{
+	struct nvif_outp_dp_link_rates_v0 args;
+	int ret;
+
+	if (rate_nr > ARRAY_SIZE(args.rate))
+		return -EINVAL;
+
+	args.version = 0;
+	args.rates = rate_nr;
+	memcpy(args.rate, rate, rate_nr);
+
+	ret = nvif_object_mthd(&outp->object, NVIF_OUTP_V0_DP_LINK_RATES, &args, sizeof(args));
+	NVIF_ERRON(ret, &outp->object, "[DP_LINK_RATES rates:%d]", args.rates);
+	return ret;
+}
+
 int
 nvif_outp_dp_mst_vcpi(struct nvif_outp *outp, int head,
 		      u8 start_slot, u8 num_slots, u16 pbn, u16 aligned_pbn)
