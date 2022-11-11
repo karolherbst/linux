@@ -95,6 +95,10 @@ struct nvkm_outp_func {
 	void (*disable)(struct nvkm_outp *, struct nvkm_ior *);
 
 	int (*detect)(struct nvkm_outp *);
+
+	struct {
+		int (*aux_pwr)(struct nvkm_outp *, bool pu);
+	} dp;
 };
 
 #define OUTP_MSG(o,l,f,a...) do {                                              \

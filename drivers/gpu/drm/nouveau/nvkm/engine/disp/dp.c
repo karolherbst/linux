@@ -39,6 +39,14 @@
  */
 #define AMPERE_IED_HACK(disp) ((disp)->engine.subdev.device->card_type >= GA100)
 
+static int
+nvkm_dp_aux_pwr(struct nvkm_outp *outp, bool pu)
+{
+	outp->dp.enabled = pu;
+	nvkm_dp_enable(outp, outp->dp.enabled);
+	return 0;
+}
+
 struct lt_state {
 	struct nvkm_outp *outp;
 
@@ -765,6 +773,7 @@ nvkm_dp_func = {
 	.release = nvkm_dp_release,
 	.disable = nvkm_dp_disable,
 	.detect = nvkm_outp_detect,
+	.dp.aux_pwr = nvkm_dp_aux_pwr,
 };
 
 int
