@@ -991,7 +991,10 @@ nv50_msto_atomic_enable(struct drm_encoder *encoder, struct drm_atomic_state *st
 
 	if (!mstm->links++) {
 		/*XXX: MST audio. */
-		nvif_outp_acquire_dp(&mstm->outp->outp, mstm->outp->dp.dpcd, 0, 0, false, true);
+		nvif_outp_acquire_dp(&mstm->outp->outp, mstm->outp->dp.dpcd,
+							mstm->outp->dp.link_nr,
+							mstm->outp->dp.link_bw / 27000,
+							false, true);
 	}
 
 	if (head->func->display_id) {
@@ -1630,7 +1633,10 @@ nv50_sor_atomic_enable(struct drm_encoder *encoder, struct drm_atomic_state *sta
 		nvif_outp_acquire_lvds(&nv_encoder->outp, lvds_dual, lvds_8bpc);
 		break;
 	case NVIF_OUTP_DP:
-		nvif_outp_acquire_dp(&nv_encoder->outp, nv_encoder->dp.dpcd, 0, 0, hda, false);
+		nvif_outp_acquire_dp(&nv_encoder->outp, nv_encoder->dp.dpcd,
+							nv_encoder->dp.link_nr,
+							nv_encoder->dp.link_bw / 27000,
+							hda, false);
 		depth = nv50_dp_bpc_to_depth(asyh->or.bpc);
 
 		if (nv_encoder->outp.or.link & 1)
