@@ -577,9 +577,11 @@ nouveau_drm_device_init(struct drm_device *dev)
 	if (ret)
 		goto fail_ttm;
 
-	ret = nouveau_bios_init(dev);
-	if (ret)
-		goto fail_bios;
+	if (drm->client.device.info.family < NV_DEVICE_INFO_V0_TESLA) {
+		ret = nouveau_bios_init(dev);
+		if (ret)
+			goto fail_bios;
+	}
 
 	nouveau_accel_init(drm);
 
